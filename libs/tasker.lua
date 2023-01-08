@@ -1,38 +1,15 @@
 local _T = {
 	list = {},
-	onerror = {},
-	waitable = {
-		signal = function(self)
-			self.signaled = true
-		end,
-		reset = function(self)
-			self.signaled = false
-		end,
-		isSignaled = function(self)
-			return self.signaled
-		end,
-		wait = function(self)
-			while not self.signaled do
-				coroutine.yield()
-			end
-		end
-	}
+	onerror = {}
 }
 
 local sleep = socket.sleep
-_T.waitable.__index = _T.waitable
 
 function _T.sleep(sec)
 	local time = socket.gettime() + sec
 	while socket.gettime() < time do
 		coroutine.yield()
 	end
-end
-
-function _T:newWaitable()
-	return setmetatable({
-		signaled = false
-	}, self.waitable)
 end
 
 function _T:newTask(func, errh)

@@ -29,10 +29,10 @@ local cmds = {
 
 function _T:read(count)
 	count = tonumber(count)
-	local buf = ''
+	local buf, data, err = ''
 
 	while not self.dead do
-		local data, err, pdata = self.fd:receive(count or '*a')
+		data, err, buf = self.fd:receive(count or '*a', buf)
 		if err == 'closed' then
 			break
 		end
@@ -40,18 +40,14 @@ function _T:read(count)
 			coroutine.yield()
 		end
 		if data then
-			return buf .. data
+			return data
 		end
-		if pdata then
+		if buf then
 			if not count then
-				return pdata
+				return buf
 			end
-			buf = buf .. pdata
-			if count then
-				count = count - #pdata
-				if count == 0 then
-					return buf
-				end
+			if count and count == #buf then
+				return buf
 			end
 		end
 		coroutine.yield()
