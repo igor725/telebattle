@@ -57,12 +57,11 @@ function _Ga:waitTurn(tc)
 end
 
 function _Ga:configure()
-	local wait = tasker:newWaitable()
 	local function makemessage(text)
 		return function(me)
 			me:fullClear()
 			me:send(text .. '\r\nPress any key to return to the main menu')
-			me:read(1)
+			me:waitForInput()
 			menu:run(me)
 			return true
 		end
@@ -91,7 +90,7 @@ function _Ga:configure()
 			if hide then
 				opp = owner
 				text = 'Opponent\'s field'
-				_hint = hint:new(me, field, true)
+				_hint = hint:new(me, field, true, false)
 			else
 				text = 'Your field'
 			end
@@ -106,15 +105,13 @@ function _Ga:configure()
 			me:textOn(1, status, 'Your turn!')
 			me:clearFromCur()
 			while self.turn == me do
-				local char = me:read(1, wait)
-				if not char then
-					self:finish()
-					break
-				end
-				if not _hint:update(char, false, wait) then
-					if char == '\r' then
+				local key = me:waitForInput()
+
+				if not _hint:update(key) then
+					if key == 'enter' then
 						local field = _hint:getField()
 						local x, y = _hint:getPos()
+
 						if field:hit(x, y) then
 							local wx, wy = field:toWorld(x, y)
 							me:textOn(wx, wy, field:getCharOn(x, y, true))
@@ -128,14 +125,16 @@ function _Ga:configure()
 								self:finish(me)
 								me:setHandler(makemessage('You win!'))
 								opp:setHandler(makemessage('You loose!'))
+								break
 							end
 						end
+					elseif key == 'ctrlc' then
+						self:finish(opp)
 					end
 				end
 			end
 		end
 
-		wait:signal()
 		if self.winner == nil then
 			me:setHandler(makemessage('Opponent left the game'))
 		end
@@ -146,10 +145,10 @@ function _Ga:configure()
 	local function placing(me)
 		local myfield = self:fieldOf(me)
 		local _placer = placer:new(myfield)
+		local _hint = hint:new(me, myfield, false, true)
 		local w = myfield:getDimensions()
 		me:fullClear()
 		myfield:draw(me, true)
-		local _hint = hint:new(me, myfield)
 		local shoff = w + 4
 		local marker = shoff + 12
 		local selected = 0
@@ -158,6 +157,10 @@ function _Ga:configure()
 			me:textOn(marker, 2 + selected, ' ')
 			me:textOn(marker, 2 + new, '*')
 			selected = new
+		end
+
+		local function selectNext()
+			updateShipSelection((selected + 1) % 4)
 		end
 
 		local function updateShipInfo(ty)
@@ -173,7 +176,7 @@ function _Ga:configure()
 			end
 		end
 
-		me:textOn(shoff, 1, 'Press tab to select ship to place')
+		me:textOn(shoff, 1, 'Available ships:')
 		updateShipSelection(0)
 		updateShipInfo()
 
@@ -185,11 +188,41 @@ function _Ga:configure()
 		end
 
 		while self.active do
-			local char = me:read(1, wait)
-			if not char then break end
-			if not _hint:update(char, true, wait) then
-				local x, y = _hint:getPos()
-				if char == '\r' then -- Return
+			local key = me:waitForInput()
+			local x, y = _hint:getPos()
+
+			if not _hint:update(key) then
+				if key == 'r' then
+					if _placer:rotate(x, y) then
+						myfield:draw(me, true)
+					end
+				elseif key == 'z' then
+					if _placer:removeAll() then
+						myfield:draw(me, true)
+						updateShipInfo()
+					end
+				elseif key == 'p' then
+					_placer:randomPlace()
+					myfield:draw(me, true)
+					updateShipInfo()
+				elseif key == 'm' then
+					local sh, id = _placer:getShipOn(x, y)
+					if id ~= nil then
+						if _placer:remove(id) then
+							local sht = sh:getType()
+							updateShipInfo(sht)
+							updateShipSelection(sht)
+							myfield:draw(me, true)
+							_hint:update('\0')
+						end
+					end
+				elseif key == 'tab' then
+					selectNext()
+				elseif key == 'ctrlc' then
+					self:finish()
+					menu:run(me)
+					return true
+				elseif key == 'enter' then
 					if _placer:isReady() then
 						me:setHandler(game)
 						self:playerReady()
@@ -198,32 +231,9 @@ function _Ga:configure()
 						if _placer:place(x, y, selected) then
 							updateShipInfo(selected)
 							myfield:draw(me, true)
-						end
-					end
-				elseif char == '\t' then -- tab
-					updateShipSelection((selected + 1) % 4)
-				elseif char == 'r' then
-					if _placer:rotate(x, y) then
-						myfield:draw(me, true)
-					end
-				elseif char == 'z' then
-					if _placer:removeAll() then
-						myfield:draw(me, true)
-						updateShipInfo()
-					end
-				elseif char == 'p' then
-					_placer:randomPlace()
-					myfield:draw(me, true)
-					updateShipInfo()
-				elseif char == 'm' then
-					local sh, id = _placer:getShipOn(x, y)
-					if id ~= nil then
-						if _placer:remove(id) then
-							local sht = sh:getType()
-							updateShipInfo(sht)
-							updateShipSelection(sht)
-							myfield:draw(me, true)
-							_hint:update('\0', true)
+							if _placer:getAvail(selected) < 1 then
+								selectNext()
+							end
 						end
 					end
 				end

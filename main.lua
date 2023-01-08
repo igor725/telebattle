@@ -26,42 +26,21 @@ local function init(me)
 	)
 	me:send('Waiting for telnet to respond...')
 
-	local subneog
 	local fw, fh = field.getDimensions()
 	fw, fh = fw * 3, fh + 4
 
 	while true do
-		if subneog == '\x1F' then
-			local b1, b2, b3, b4 = me:read(4):byte(1, -1)
-			local ww, wh = b1 * 256 + b2, b3 * 256 + b4
+		local ww, wh = me:waitForDimsChange()
 
-			if wh < fh or ww < fw then
-				me:fullClear()
-				me:send(('Your terminal window is too small, resize it please to (%d, %d)'):format(fw, fh))
-			else
-				me:fullClear()
-				me:sendCommand('IAC', 'DONT', 'NAWS')
-				menu:run(me)
-				return true
-			end
-		end
-
-		if me:read(1) == '\xFF' then
-			local act = me:read(1)
-
-			if act == '\xFA' then
-				subneog = me:read(1)
-				me:send('\xFF\xF9')
-			elseif act == '\xF0' then
-				subneog = nil
-			elseif act == '\xFC' then
-				if me:read(1) == '\x1F' then
-					menu:run(me)
-					return true
-				end
-			else
-				me:read(1)
-			end
+		if wh < fh or ww < fw then
+			me:fullClear()
+			me:send(('Your terminal window is too small, resize it please\r\nE: (%d, %d)\r\nG: (%d, %d)'):format(
+				fw, fh, ww, wh
+			))
+		else
+			me:sendCommand('IAC', 'DONT', 'NAWS')
+			menu:run(me)
+			return true
 		end
 	end
 end

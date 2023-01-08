@@ -48,21 +48,17 @@ function _H:place(char)
 	end
 end
 
-function _H:handleEscape(wait)
-	local tc = self.tc
-	if tc:read(1, wait) ~= '[' then
-		return false
-	end
-
-	local cmd = tc:read(1, wait)
-	if cmd == 'D' then -- Left
+function _H:handleKey(key)
+	if key == 'aleft' then
 		self:movedir(-1, 0)
-	elseif cmd == 'C' then -- Right
+	elseif key == 'aright' then
 		self:movedir(1, 0)
-	elseif cmd == 'A' then -- Up
+	elseif key == 'aup' then
 		self:movedir(0, -1)
-	elseif cmd == 'B' then -- Down
+	elseif key == 'adown' then
 		self:movedir(0, 1)
+	else
+		return false
 	end
 
 	return true
@@ -77,11 +73,10 @@ function _H:movedir(dc, dr)
 	self:place('*')
 end
 
-function _H:update(ch, dontmove, wait)
-	self.offset = dontmove and 0 or self.field:getPos()
-	if ch == '\x1B' then
-		return self:handleEscape(wait)
-	elseif ch == '\x0A' then
+function _H:update(ch)
+	if self:handleKey(ch) then
+		return true
+	elseif #ch > 1 then
 		return false
 	end
 
@@ -103,9 +98,10 @@ function _H:update(ch, dontmove, wait)
 	return true
 end
 
-function _H:new(tc, field, hide)
+function _H:new(tc, field, hide, dontmove)
 	return setmetatable({
 		hide = hide == true,
+		offset = dontmove and 0 or field:getPos(),
 		field = field,
 		tc = tc,
 		row = 0,

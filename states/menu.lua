@@ -17,28 +17,38 @@ function _M:run(tc)
 					return true
 				end
 			end
-			me:read()
 			coroutine.yield()
 		end
 
 		return true
 	end
 
-	tc:setHandler(function(me)
-		me:fullClear()
-		me:send('Welcome to the Telnet Battleship!\r\n1. Search for game\r\n2. Exit\r\n')
+	local function imenu(title, buttons)
+		assert(#buttons < 10, 'Too many options')
 
-		while true do
-			local inp = me:read(1)
-			if inp == '1' then
-				me:setHandler(search)
-				return true
-			elseif inp == '2' then
-				me:send('Goodbye!')
-				break
+		return function(me)
+			me:fullClear()
+			me:send(title)
+			for i = 1, #buttons do
+				me:send(('\r\n%d. %s'):format(i, buttons[i].label))
+			end
+
+			while true do
+				local btn = tonumber(me:waitForInput())
+				if btn and buttons[btn] then
+					local ret = buttons[btn].func(me)
+					if ret ~= nil then
+						return ret
+					end
+				end
 			end
 		end
-	end)
+	end
+
+	tc:setHandler(imenu('Welcome to the Telnet Battleship!', {
+		{label = 'Search for game', func = function(me) return me:setHandler(search) end},
+		{label = 'Exit', func = function(me) me:fullClear() me:send('Goodbye!') return false end}
+	}))
 end
 
 return _M

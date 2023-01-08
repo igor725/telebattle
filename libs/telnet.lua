@@ -9,6 +9,7 @@ local cmds = {
 
 	SE = '\xF0',
 	BREAK = '\xF3',
+	GOAHEAD = '\xF9',
 	SB = '\xFA',
 	WILL = '\xFB',
 	WONT = '\xFC',
@@ -22,15 +23,11 @@ local cmds = {
 	RESET = '0m'
 }
 
-function _T:read(count, wait)
+function _T:read(count)
 	count = tonumber(count)
 	local buf = ''
 
-	while not self.dead and not self.closing do
-		if wait and wait:isSignaled()then
-			return nil, 'signaled'
-		end
-
+	while not self.dead do
 		local data, err, pdata = self.fd:receive(count or '*a')
 		if err == 'closed' then
 			break
@@ -74,6 +71,7 @@ end
 
 function _T:setHandler(func)
 	self.handler = func
+	return true
 end
 
 function _T:decode(...)
@@ -94,7 +92,11 @@ function _T:sendCommand(...)
 
 	for i = 1, select('#', ...) do
 		local ar = select(i, ...)
-		cmd = cmd .. cmds[ar]
+		if type(ar) == 'number' then
+			cmd = cmd .. string.char(ar)
+		else
+			cmd = cmd .. cmds[ar]
+		end
 	end
 
 	self:send(cmd)
@@ -123,6 +125,53 @@ function _T:textOn(x, y, text)
 	self:send(text)
 end
 
+function _T:waitForInput()
+	while true do
+		coroutine.yield()
+
+		if self.lastchar ~= nil then
+			return self.lastchar
+		elseif self.lastkey ~= nil then
+			return self.lastkey
+		end
+	end
+end
+
+function _T:getDimensions()
+	local info = self.info
+	return info.width, info.height
+end
+
+function _T:waitForDimsChange()
+	local w, h = self:getDimensions()
+
+	while not self.dead do
+		local nw, nh = self:getDimensions()
+		if nw ~= w or nh ~= h then
+			return nw, nh
+		end
+
+		coroutine.yield()
+	end
+
+	return w, h
+end
+
+local keys = {
+	['D'] = 'aleft',
+	['C'] = 'aright',
+	['A'] = 'aup',
+	['B'] = 'adown',
+}
+
+local negotiators = {
+	[0x1F] = function(self)
+		local info = self.info
+		local b1, b2, b3, b4 = self:read(4):byte(1, -1)
+		info.width, info.height = b1 * 256 + b2, b3 * 256 + b4
+	end
+}
+
 function _T:configure()
 	local fd = self.fd
 	fd:setoption('tcp-nodelay', true)
@@ -130,8 +179,85 @@ function _T:configure()
 
 	local function fuckit(err)
 		fd:send('\x1B[2J\x1B[H' .. err)
+		self.dead = true
 		fd:close()
 	end
+
+	tasker:newTask(function()
+		local subneog
+
+		while not self.dead do
+			self.lastchar, self.lastkey = nil, nil
+
+			if subneog then
+				subneog(self)
+			end
+
+			local ch = self:read(1)
+			if not ch then
+				self.dead = true
+				break
+			end
+			local chb = ch:byte()
+
+			if chb == 0x1B then
+				local es = self:read(1)
+				if es == '[' then
+					local act = self:read(1)
+					local key = keys[act]
+					if key then
+						self.lastkey = key
+					else
+						print('Unhandled escape sequence:', act)
+					end
+				end
+			elseif chb < 0x20 then
+				if ch ~= '\r' then
+					if ch == '\3' then
+						self.lastkey = 'ctrlc'
+					elseif ch == '\t' then
+						self.lastkey = 'tab'
+					elseif ch == '\n' then
+						self.lastkey = 'enter'
+					end
+				end
+			elseif chb >= 0x20 and chb <= 0x7F then -- ASCII symbol
+				self.lastchar = ch
+			elseif chb == 0xFF then -- IAC
+				local act = self:read(1)
+
+				if act == cmds.SB then -- Telnet wants to start negotiation
+					local opt = self:read(1):byte()
+					subneog = negotiators[opt]
+					if subneog then
+						self:sendCommand('IAC', 'GOAHEAD')
+					else
+						self:sendCommand('IAC', 'WONT', opt)
+					end
+				elseif act == cmds.SE then -- Telnet wants to end negotiation
+					subneog = nil
+				elseif act == cmds.WILL then -- Telnet wants to do something
+					local cmd = self:read(1)
+					if cmd == cmds.NAWS then
+						self.modes.naws = true
+					end
+				elseif act == cmds.WONT then -- Telnet doesn't want to do something
+					local cmd = self:read(1)
+					if cmd == cmds.NAWS then
+						self.modes.naws = true
+					end
+				elseif act == cmds.DO then -- Telnet does something
+					self:read(1)
+				else
+					print(('Unhandled telnet action: %X'):format(act:byte()))
+				end
+			end
+
+			if self.lastchar or self.lastkey then
+				coroutine.yield()
+			end
+		end
+	end, fuckit)
 
 	tasker:newTask(function()
 		while self.handler and self.handler(self) do
@@ -144,7 +270,7 @@ function _T:configure()
 	end, fuckit)
 
 	tasker:newTask(function()
-		while true do
+		while not self.dead do
 			local sbuf = self.sbuffer
 			local bufsz = #sbuf
 
@@ -180,6 +306,13 @@ end
 
 function _T:init(fd)
 	return setmetatable({
+		info = {
+			width = 0, height = 0,
+			terminal = 'unknown'
+		},
+		modes = {
+			naws = false
+		},
 		closed = false,
 		sbuffer = '',
 		spos = 1,
