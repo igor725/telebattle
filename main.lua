@@ -18,31 +18,26 @@ assert(server:listen())
 io.write('Telnet listener startd on *:', PORT, '\r\n')
 
 local function init(me)
-	-- TODO: Переместить обработчик telnet-команд в telnet.lua
 	me:sendCommand(
 		'IAC', 'WILL', 'ECHO',
-		'IAC', 'WILL', 'SUPP_GO_AHEAD',
-		'IAC', 'DO', 'NAWS'
+		'IAC', 'WILL', 'SUPP_GO_AHEAD'
 	)
 	me:send('Waiting for telnet to respond...')
 
+	local ww, wh = me:getDimensions()
 	local fw, fh = field.getDimensions()
 	fw, fh = fw * 3, fh + 4
 
-	while true do
-		local ww, wh = me:waitForDimsChange()
+	while wh < fh or ww < fw do
+		me:fullClear()
+		me:send(('Your terminal window is too small, resize it please\r\nE: (%d, %d)\r\nG: (%d, %d)'):format(
+			fw, fh, ww, wh
+		))
 
-		if wh < fh or ww < fw then
-			me:fullClear()
-			me:send(('Your terminal window is too small, resize it please\r\nE: (%d, %d)\r\nG: (%d, %d)'):format(
-				fw, fh, ww, wh
-			))
-		else
-			me:sendCommand('IAC', 'DONT', 'NAWS')
-			menu:run(me)
-			return true
-		end
+		ww, wh = me:waitForDimsChange()
 	end
+
+	return menu:run(me)
 end
 
 tasker:newTask(function()

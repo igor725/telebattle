@@ -7,6 +7,10 @@ local cmds = {
 	TERM = '\x18',
 	NAWS = '\x1F',
 
+	-- TERMINAL-TYPE codes
+	IS = '\x00',
+	SEND = '\x01',
+
 	SE = '\xF0',
 	BREAK = '\xF3',
 	GOAHEAD = '\xF9',
@@ -138,12 +142,25 @@ function _T:waitForInput()
 end
 
 function _T:getDimensions()
+	if not self.modes.naws then
+		return 0, 0
+	end
+
 	local info = self.info
 	return info.width, info.height
 end
 
+function _T:getTerminal()
+	if not self.modes.term then
+		return 'unknown'
+	end
+
+	return self.info.term
+end
+
 function _T:waitForDimsChange()
 	local w, h = self:getDimensions()
+	if w == 0 or h == 0 then return 0, 0 end
 
 	while not self.dead do
 		local nw, nh = self:getDimensions()
@@ -165,14 +182,30 @@ local keys = {
 }
 
 local negotiators = {
-	[0x1F] = function(self)
-		local info = self.info
-		local b1, b2, b3, b4 = self:read(4):byte(1, -1)
+	[cmds.NAWS] = function(tc)
+		local info = tc.info
+		local b1, b2, b3, b4 = tc:read(4):byte(1, -1)
 		info.width, info.height = b1 * 256 + b2, b3 * 256 + b4
+		return false
+	end,
+	[cmds.TERM] = function(tc)
+		assert(tc:read(1) == cmds.IS)
+		local name = ''
+		while true do
+			local char = tc:read(1)
+
+			if char ~= cmds.IAC then
+				name = name .. char
+			else
+				assert(tc:read(1) == cmds.SE)
+				tc.info.term = name
+				return true
+			end
+		end
 	end
 }
 
-function _T:configure()
+function _T:configure(dohs)
 	local fd = self.fd
 	fd:setoption('tcp-nodelay', true)
 	fd:settimeout(0)
@@ -184,13 +217,13 @@ function _T:configure()
 	end
 
 	tasker:newTask(function()
-		local subneog
+		local subnego
 
 		while not self.dead do
 			self.lastchar, self.lastkey = nil, nil
 
-			if subneog then
-				subneog(self)
+			if subnego and subnego(self) then
+				subnego = nil
 			end
 
 			local ch = self:read(1)
@@ -227,26 +260,31 @@ function _T:configure()
 				local act = self:read(1)
 
 				if act == cmds.SB then -- Telnet wants to start negotiation
-					local opt = self:read(1):byte()
-					subneog = negotiators[opt]
-					if subneog then
+					local opt = self:read(1)
+					subnego = negotiators[opt]
+					if subnego then
 						self:sendCommand('IAC', 'GOAHEAD')
 					else
-						self:sendCommand('IAC', 'WONT', opt)
+						self:sendCommand('IAC', 'WONT', opt:byte())
 					end
 				elseif act == cmds.SE then -- Telnet wants to end negotiation
-					subneog = nil
+					subnego = nil
 				elseif act == cmds.WILL then -- Telnet wants to do something
 					local cmd = self:read(1)
 					if cmd == cmds.NAWS then
 						self.modes.naws = true
+					elseif cmd == cmds.TERM then
+						self.modes.term = true
+						self:sendCommand('IAC', 'SB', 'TERM', 'SEND', 'IAC', 'SE')
 					end
 				elseif act == cmds.WONT then -- Telnet doesn't want to do something
 					local cmd = self:read(1)
 					if cmd == cmds.NAWS then
 						self.modes.naws = true
+					elseif cmd == cmds.TERM then
+						self.modes.term = false
 					end
-				elseif act == cmds.DO then -- Telnet does something
+				elseif act == cmds.DO then -- Telnet does something, we don't care much about it
 					self:read(1)
 				else
 					print(('Unhandled telnet action: %X'):format(act:byte()))
@@ -260,6 +298,30 @@ function _T:configure()
 	end, fuckit)
 
 	tasker:newTask(function()
+		if dohs then
+			self:sendCommand(
+				'IAC', 'DO', 'NAWS',
+				'IAC', 'DO', 'TERM'
+			)
+
+			local modes = self.modes
+			while modes.term == nil or modes.naws == nil do
+				coroutine.yield()
+			end
+
+			local info = self.info
+			if modes.term then
+				while info.term == nil do
+					coroutine.yield()
+				end
+			end
+			if modes.naws then
+				while info.width == nil do
+					coroutine.yield()
+				end
+			end
+		end
+
 		while self.handler and self.handler(self) do
 			if self.closing or self.dead then
 				break
@@ -304,20 +366,15 @@ function _T:configure()
 	return self
 end
 
-function _T:init(fd)
+function _T:init(fd, dohs)
 	return setmetatable({
-		info = {
-			width = 0, height = 0,
-			terminal = 'unknown'
-		},
-		modes = {
-			naws = false
-		},
+		info = {},
+		modes = {},
 		closed = false,
 		sbuffer = '',
 		spos = 1,
 		fd = fd
-	}, self):configure()
+	}, self):configure(dohs)
 end
 
 return _T

@@ -45,7 +45,7 @@ function _M:run(tc)
 		end
 	end
 
-	tc:setHandler(imenu('Welcome to the Telnet Battleship!', {
+	return tc:setHandler(imenu('Welcome to the Telnet Battleship!', {
 		{label = 'Search for game', func = function(me) return me:setHandler(search) end},
 		{label = 'Exit', func = function(me) me:fullClear() me:send('Goodbye!') return false end}
 	}))
