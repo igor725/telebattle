@@ -113,13 +113,20 @@ end
 
 function _P:randomPlace()
 	self:removeAll()
+	local cnt = 0
 
 	for i = 0, 3 do
 		while not self:place(
 			math.random(0, 9),
 			math.random(0, 9),
 			i, nil
-		) or self:getAvail(i) > 0 do end
+		) or self:getAvail(i) > 0 do
+			cnt = cnt + 1
+			if cnt > 5000 then
+				self:randomPlace()
+				break
+			end
+		end
 	end
 end
 
@@ -133,7 +140,6 @@ function _P:removeAll()
 
 	return true
 end
-
 
 function _P:remove(id)
 	id = tonumber(id)

@@ -21,6 +21,10 @@ function _Ga:fieldOf(pl)
 	return self.fields[pl]
 end
 
+function _Ga:placerOf(fi)
+	return self.placers[fi]
+end
+
 function _Ga:finish(w)
 	self.active = false
 	self.winner = self.winner or w
@@ -29,7 +33,9 @@ end
 function _Ga:playerReady()
 	self.state = self.state + 1
 	if self.turn == nil then
-		self.turn = self.players[math.random(1, 2)]
+		for _ = 0, math.random(0, 1) do
+			self.turn = next(self.fields, self.turn)
+		end
 	end
 end
 
@@ -55,7 +61,16 @@ function _Ga:waitTurn(tc)
 	return self.active
 end
 
+function _Ga:getOpponentOf(pl)
+	for opp in pairs(self.fields) do
+		if opp ~= pl then return opp end
+	end
+end
+
 function _Ga:configure()
+	local gamestate, placingstate
+	local scores = {}
+
 	local function makemessage(text)
 		return function(me)
 			me:fullClear()
@@ -66,7 +81,61 @@ function _Ga:configure()
 		end
 	end
 
-	local function game(me)
+	local refused = makemessage('The opponent refused to play the next game')
+	local endgame = telnet.genMenu(function(me)
+		local opp = self:getOpponentOf(me)
+		return (self.winner == me and 'You win!' or 'You loose!') ..
+		('\r\nYou: %d, Opponent: %d'):format(scores[me] or 0, scores[opp] or 0)
+	end, {
+		{
+			label = 'Play another game with this player',
+			func = function(me)
+				if self.state == -1 then
+					return me:setHandler(refused)
+				elseif self.state == 3 then -- Новая игра уже запрошена вторым игроком
+					self.state = 4
+					return me:setHandler(function()
+						while self.state == 4 do
+							coroutine.yield()
+						end
+
+						if self.state == -1 then
+							return me:setHandler(refused)
+						end
+
+						self:placerOf(self:fieldOf(me)):removeAll()
+						return me:setHandler(placingstate)
+					end)
+				elseif self.state == 2 then -- Новая игра ещё не была запрошена
+					self.turn, self.state, self.active = nil, 3, true
+					return me:setHandler(function()
+						me:fullClear()
+						me:send('Waiting for other player....')
+						while self.state == 3 do
+							coroutine.yield()
+						end
+
+						if self.state == -1 then
+							return me:setHandler(refused)
+						end
+
+						self.state = 0
+						self:placerOf(self:fieldOf(me)):removeAll()
+						return me:setHandler(placingstate)
+					end)
+				end
+			end
+		},
+		{
+			label = 'Exit to main menu',
+			func = function(me)
+				self.state = -1
+				return menu:run(me)
+			end
+		}
+	})
+
+	gamestate = function(me)
 		local myfield = self:fieldOf(me)
 		local w, h = myfield:getDimensions()
 		local status = h + 4
@@ -109,7 +178,7 @@ function _Ga:configure()
 				if not _hint:update(key) then
 					if key == 'enter' then
 						local field = _hint:getField()
-						local placer = self.placers[field]
+						local placer = self:placerOf(field)
 						local x, y = _hint:getPos()
 
 						if field:hit(x, y) then
@@ -138,9 +207,10 @@ function _Ga:configure()
 									end
 								end
 							else
+								scores[me] = (scores[me] or 0) + 1
 								self:finish(me)
-								me:setHandler(makemessage('You win!'))
-								opp:setHandler(makemessage('You loose!'))
+								me:setHandler(endgame)
+								opp:setHandler(endgame)
 								break
 							end
 						end
@@ -158,12 +228,11 @@ function _Ga:configure()
 		return true
 	end
 
-	local function placing(me)
+	placingstate = function(me)
 		local myfield = self:fieldOf(me)
-		local _placer = placer:new(myfield)
+		local _placer = self:placerOf(myfield)
 		local _hint = hint:new(me, myfield, false, true)
 		local w = myfield:getDimensions()
-		self.placers[myfield] = _placer
 		me:fullClear()
 		myfield:draw(me, true)
 		local shoff = w + 4
@@ -242,7 +311,7 @@ function _Ga:configure()
 				elseif key == 'enter' then
 					if _placer:isReady() then
 						self:playerReady()
-						return me:setHandler(game)
+						return me:setHandler(gamestate)
 					else
 						if _placer:place(x, y, selected) then
 							updateShipInfo(selected)
@@ -262,8 +331,9 @@ function _Ga:configure()
 		return true
 	end
 
-	for i = 1, 2 do
-		self.players[i]:setHandler(placing)
+	for pl, field in pairs(self.fields) do
+		self.placers[field] = placer:new(field)
+		pl:setHandler(placingstate)
 	end
 
 	self.configure = false
@@ -272,7 +342,6 @@ end
 
 function _Ga:new(p1, p2)
 	return setmetatable({
-		players = {p1, p2},
 		active = true,
 		turn = nil,
 		state = 0,

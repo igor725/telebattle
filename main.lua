@@ -41,6 +41,8 @@ local function init(me)
 end
 
 tasker:newTask(function()
+	math.randomseed(os.time())
+
 	while true do
 		local cl
 		repeat

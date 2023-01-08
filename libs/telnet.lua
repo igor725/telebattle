@@ -74,6 +74,38 @@ function _T:setHandler(func)
 	return true
 end
 
+function _T.genMenu(title, buttons)
+	assert(#buttons < 10, 'Too many options')
+
+	return function(me)
+		me:fullClear()
+		if type(title) == 'function' then
+			me:send(tostring(title(me)))
+		else
+			me:send(tostring(title))
+		end
+
+		for i = 1, #buttons do
+			local blabel = buttons[i].label
+			if type(blabel) == 'function' then
+				blabel = blabel(me)
+			end
+			me:send(('\r\n%d. %s'):format(i, tostring(blabel)))
+		end
+
+		while true do
+			local btn = tonumber(me:waitForInput())
+
+			if btn and buttons[btn] then
+				local ret = buttons[btn].func(me)
+				if ret ~= nil then
+					return ret
+				end
+			end
+		end
+	end
+end
+
 function _T:decode(...)
 	local c = ...
 	if not c then return end
@@ -130,6 +162,10 @@ function _T:waitForInput()
 		coroutine.yield()
 	until self.lastkey ~= nil
 
+	return self.lastkey
+end
+
+function _T:lastInput()
 	return self.lastkey
 end
 
@@ -255,6 +291,8 @@ function _T:configure(dohs)
 				if ch ~= '\r' then
 					if ch == '\3' then
 						self.lastkey = 'ctrlc'
+					elseif ch == '\8' then
+						self.lastkey = 'backspace'
 					elseif ch == '\t' then
 						self.lastkey = 'tab'
 					elseif ch == '\n' then
