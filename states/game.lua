@@ -9,7 +9,6 @@ local helptext = {
 	'R - rotate the ship under the cursor',
 	'P - randomize ships',
 	'Z - clear the field',
-	'S - start the game',
 	'',
 	'You can also move the cursor around the',
 	'field by pressing the buttons A-J and 0-9',
@@ -110,6 +109,7 @@ function _Ga:configure()
 				if not _hint:update(key) then
 					if key == 'enter' then
 						local field = _hint:getField()
+						local placer = self.placers[field]
 						local x, y = _hint:getPos()
 
 						if field:hit(x, y) then
@@ -118,8 +118,24 @@ function _Ga:configure()
 							opp:textOn(wx, wy, field:getCharOn(x, y, true))
 
 							if field:isAlive() then
-								if not field:isKilled(x, y) then
+								local ship = placer:getShipOn(x, y)
+								if not ship then
 									self.turn = opp
+								else
+									if ship:attack() then
+										local len = ship:getLength()
+										local sx, sy = ship:getPos()
+										local dx, dy = ship:getDirection()
+										for i = math.max(0, sy - 1), math.min(9, sy + (len * dy) + 1 * dx) do
+											for j = math.max(0, sx - 1), math.min(9, sx + (len * dx) + 1 * dy) do
+												if field:hit(j, i) then
+													local nwx, nwy = field:toWorld(j, i)
+													me:textOn(nwx, nwy, field:getCharOn(j, i, true))
+													opp:textOn(nwx, nwy, field:getCharOn(j, i, true))
+												end
+											end
+										end
+									end
 								end
 							else
 								self:finish(me)
@@ -147,6 +163,7 @@ function _Ga:configure()
 		local _placer = placer:new(myfield)
 		local _hint = hint:new(me, myfield, false, true)
 		local w = myfield:getDimensions()
+		self.placers[myfield] = _placer
 		me:fullClear()
 		myfield:draw(me, true)
 		local shoff = w + 4
@@ -224,9 +241,8 @@ function _Ga:configure()
 					return true
 				elseif key == 'enter' then
 					if _placer:isReady() then
-						me:setHandler(game)
 						self:playerReady()
-						return true
+						return me:setHandler(game)
 					else
 						if _placer:place(x, y, selected) then
 							updateShipInfo(selected)
@@ -260,6 +276,7 @@ function _Ga:new(p1, p2)
 		active = true,
 		turn = nil,
 		state = 0,
+		placers = {},
 		fields = {
 			[p1] = field:new(0),
 			[p2] = field:new(1)

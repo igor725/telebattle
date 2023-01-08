@@ -58,11 +58,6 @@ function _F:getCharOn(x, y, hit)
 	return mat[2] and (cval ~= ' ' and 'X' or '-') or ' '
 end
 
-function _F:isKilled(x, y)
-	local mat = self.matrix[y][x]
-	return mat[1] ~= ' ' and mat[2]
-end
-
 function _F.getDimensions()
 	return #line, (10 * 2) + 2
 end

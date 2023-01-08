@@ -25,6 +25,12 @@ local ship_mt = {
 
 		return x >= sx and x <= sx + len * dx and
 		y >= sy and y <= sy + len * dy
+	end,
+
+	attack = function(self)
+		if self.health < 1 then return true end
+		self.health = self.health - 1
+		return self.health < 1
 	end
 }
 ship_mt.__index = ship_mt
@@ -32,6 +38,7 @@ ship_mt.__index = ship_mt
 local function newShip(x, y, dir, len)
 	return setmetatable({
 		dir = dir, len = len,
+		health = len,
 		x = x, y = y,
 	}, ship_mt)
 end

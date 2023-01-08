@@ -35,6 +35,7 @@ function _M:run(tc)
 
 			while true do
 				local btn = tonumber(me:waitForInput())
+
 				if btn and buttons[btn] then
 					local ret = buttons[btn].func(me)
 					if ret ~= nil then
@@ -45,8 +46,18 @@ function _M:run(tc)
 		end
 	end
 
+	local function friends_host(me) end
+	local function friends_enter(me) end
+
+	local friends = imenu('Play with friend', {
+		{label = 'Host a game', func = friends_host},
+		{label = 'Enter an existing game', func = friends_enter},
+		{label = 'Go back', func = function(me) return self:run(me) end}
+	})
+
 	return tc:setHandler(imenu('Welcome to the Telnet Battleship!', {
 		{label = 'Search for game', func = function(me) return me:setHandler(search) end},
+		{label = 'Play with a friend', func = function(me) return me:setHandler(friends) end},
 		{label = 'Exit', func = function(me) me:fullClear() me:send('Goodbye!') return false end}
 	}))
 end

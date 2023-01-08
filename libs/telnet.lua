@@ -130,15 +130,11 @@ function _T:textOn(x, y, text)
 end
 
 function _T:waitForInput()
-	while true do
+	repeat
 		coroutine.yield()
+	until self.lastkey ~= nil
 
-		if self.lastchar ~= nil then
-			return self.lastchar
-		elseif self.lastkey ~= nil then
-			return self.lastkey
-		end
-	end
+	return self.lastkey
 end
 
 function _T:getDimensions()
@@ -175,10 +171,16 @@ function _T:waitForDimsChange()
 end
 
 local keys = {
-	['D'] = 'aleft',
-	['C'] = 'aright',
 	['A'] = 'aup',
 	['B'] = 'adown',
+	['C'] = 'aright',
+	['D'] = 'aleft',
+	['P'] = 'pause',
+	['1~'] = 'home',
+	['2~'] = 'insert',
+	['4~'] = 'end',
+	['5~'] = 'pgup',
+	['6~'] = 'pgdn',
 }
 
 local negotiators = {
@@ -205,6 +207,8 @@ local negotiators = {
 	end
 }
 
+local endsym = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ~<>='
+
 function _T:configure(dohs)
 	local fd = self.fd
 	fd:setoption('tcp-nodelay', true)
@@ -220,7 +224,7 @@ function _T:configure(dohs)
 		local subnego
 
 		while not self.dead do
-			self.lastchar, self.lastkey = nil, nil
+			self.lastkey = nil
 
 			if subnego and subnego(self) then
 				subnego = nil
@@ -237,6 +241,13 @@ function _T:configure(dohs)
 				local es = self:read(1)
 				if es == '[' then
 					local act = self:read(1)
+					if not endsym:find(act, 1, true) then
+						while true do
+							local nch = self:read(1)
+							act = act .. nch
+							if endsym:find(nch, 1, true) then break end
+						end
+					end
 					local key = keys[act]
 					if key then
 						self.lastkey = key
@@ -255,7 +266,7 @@ function _T:configure(dohs)
 					end
 				end
 			elseif chb >= 0x20 and chb <= 0x7F then -- ASCII symbol
-				self.lastchar = ch
+				self.lastkey = ch
 			elseif chb == 0xFF then -- IAC
 				local act = self:read(1)
 
@@ -291,7 +302,7 @@ function _T:configure(dohs)
 				end
 			end
 
-			if self.lastchar or self.lastkey then
+			if self.lastkey then
 				coroutine.yield()
 			end
 		end
