@@ -1,6 +1,4 @@
-local PORT = tonumber(arg[1]) or 2425
-
-socket = require('socket.core')
+ljsocket = require('libs.thirdparty.ljsocket')
 tasker = require('libs.tasker')
 telnet = require('libs.telnet')
 placer = require('libs.placer')
@@ -9,13 +7,15 @@ hint = require('libs.hint')
 game = require('states.game')
 menu = require('states.menu')
 
-server = socket.tcp()
-server:settimeout(0)
-server:setoption('reuseaddr', true)
-server:setoption('tcp-nodelay', true)
-assert(server:bind('0.0.0.0', PORT))
+local info = ljsocket.find_first_address('*', tonumber(arg[1]) or 2425)
+if not info then print('No adapter found') return 1 end
+server = ljsocket.create(info.family, info.socket_type, info.protocol)
+server:set_blocking(false)
+assert(server:set_option('nodelay', true, 'tcp'))
+assert(server:set_option('reuseaddr', true))
+assert(server:bind(info))
 assert(server:listen())
-io.write('Telnet listener startd on *:', PORT, '\r\n')
+print(('Telnet listener started on: %s:%d'):format(info:get_ip(), info:get_port()))
 
 local function init(me)
 	me:sendCommand(
@@ -46,9 +46,9 @@ tasker:newTask(function()
 	while true do
 		local cl
 		repeat
-			cl = server:accept()
+			cl, err = server:accept()
 			if cl then
-				cl:settimeout(0)
+				assert(cl:set_blocking(false))
 				telnet:init(cl, true)
 				:setHandler(init)
 			end

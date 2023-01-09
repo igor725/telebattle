@@ -32,28 +32,23 @@ local cmds = {
 
 function _T:read(count)
 	count = tonumber(count)
-	local buf, data, err
+	local data, err
+	local buf = ''
 
 	while not self.dead do
-		data, err, buf = self.fd:receive(count or '*a', buf)
+		data, err = self.fd:receive(count)
 		if err == 'closed' then
 			break
-		end
-		if err == 'timeout' then
+		elseif err == 'timeout' then
 			coroutine.yield()
-		end
-		if data then
-			return data
-		end
-		if buf then
-			if not count then
-				return buf
+		else
+			count = count - #data
+			if count == 0 then
+				return buf .. data
 			end
-			if count and count == #buf then
-				return buf
-			end
+
+			buf = buf .. data
 		end
-		coroutine.yield()
 	end
 
 	self.dead = true
@@ -67,7 +62,6 @@ function _T:close()
 end
 
 function _T:isBroken()
-	self:read()
 	return self.closing or self.dead
 end
 
@@ -275,8 +269,7 @@ local endsym = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ~>=cfghijklmnopqrstuvwxyz'
 
 function _T:configure(dohs)
 	local fd = self.fd
-	fd:setoption('tcp-nodelay', true)
-	fd:settimeout(0)
+	assert(fd:set_option('nodelay', true, 'tcp'))
 
 	local function fuckit(err)
 		fd:send('\x1B[2J\x1B[H' .. err)
