@@ -1,15 +1,13 @@
 local _T = {}
 _T.__index = _T
+
 local cmds = {
+	-- Telnet commands
 	ECHO = '\x01',
 	SUPP_GO_AHEAD = '\x03',
 	SUPP_ECHO = '\x2D',
 	TERM = '\x18',
 	NAWS = '\x1F',
-
-	-- TERMINAL-TYPE codes
-	IS = '\x00',
-	SEND = '\x01',
 
 	SE = '\xF0',
 	BREAK = '\xF3',
@@ -21,6 +19,11 @@ local cmds = {
 	DONT = '\xFE',
 	IAC = '\xFF',
 
+	-- TERMINAL-TYPE codes
+	IS = '\x00',
+	SEND = '\x01',
+
+	-- Escape codes
 	VT = '\x1B[',
 	HOME = 'H',
 	CLEAR = '2J',
@@ -57,6 +60,9 @@ function _T:read(count)
 end
 
 function _T:close()
+	if self:isMouseEnabled() then
+		self:toggleMouse()
+	end
 	self.closing = true
 end
 
@@ -67,6 +73,11 @@ end
 
 function _T:send(msg)
 	self.sbuffer = self.sbuffer .. tostring(msg)
+end
+
+function _T:setMouseHandler(func)
+	self.mhandler = func
+	return true
 end
 
 function _T:setHandler(func)
@@ -202,6 +213,27 @@ function _T:waitForDimsChange()
 	return w, h
 end
 
+function _T:isMouseEnabled()
+	return self.modes.mouse
+end
+
+function _T:getMouseState()
+	return self.info.mouse
+end
+
+function _T:toggleMouse()
+	local info = self.info
+	local modes = self.modes
+	modes.mouse = not modes.mouse
+	if modes.mouse then
+		info.mouse = {x = 0, y = 0, whl = 0, lmb = false, mmb = false, rmb = false}
+		self:send('\x1B[?1003h\x1B[?1015h\x1B[?1006h')
+	else
+		info.mouse = nil
+		self:send('\x1B[?1000l')
+	end
+end
+
 local keys = {
 	['A'] = 'aup',
 	['B'] = 'adown',
@@ -239,7 +271,7 @@ local negotiators = {
 	end
 }
 
-local endsym = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ~<>='
+local endsym = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ~>=cfghijklmnopqrstuvwxyz'
 
 function _T:configure(dohs)
 	local fd = self.fd
@@ -283,6 +315,35 @@ function _T:configure(dohs)
 					local key = keys[act]
 					if key then
 						self.lastkey = key
+					elseif act:byte() == 0x3C then
+						local mouse = self.info.mouse
+						if mouse then
+							local cmd, xpos, ypos, mod = act:match('<(%d+);(%d+);(%d+)([Mm])')
+							if cmd then
+								cmd, xpos, ypos = tonumber(cmd), tonumber(xpos), tonumber(ypos)
+								mouse.x, mouse.y = xpos, ypos
+								mod = mod == 'M'
+								mouse.whl = 0
+
+								if cmd == 0 then
+									mouse.lmb = mod
+								elseif cmd == 1 then
+									mouse.mmb = mod
+								elseif cmd == 2 then
+									mouse.rmb = mod
+								elseif cmd == 64 then
+									mouse.whl = 1
+								elseif cmd == 65 then
+									mouse.whl = -1
+								elseif cmd ~= 35 then
+									print('Unhandled mouse event:', act)
+								end
+
+								if self.mhandler then
+									self.mhandler(mouse)
+								end
+							end
+						end
 					else
 						print('Unhandled escape sequence:', act)
 					end
@@ -373,7 +434,7 @@ function _T:configure(dohs)
 			end
 		end
 
-		self.closing = true
+		self:close()
 	end, fuckit)
 
 	tasker:newTask(function()
@@ -384,10 +445,10 @@ function _T:configure(dohs)
 			if bufsz > 0 then
 				local spos, err = self.spos
 				spos, err = fd:send(sbuf, spos)
-				if err then
-					coroutine.yield()
-				elseif err == 'closed' then
+				if err == 'closed' then
 					break
+				elseif err ~= nil then
+					coroutine.yield()
 				end
 
 				if bufsz == spos then
@@ -414,7 +475,9 @@ end
 function _T:init(fd, dohs)
 	return setmetatable({
 		info = {},
-		modes = {},
+		modes = {
+			mouse = false
+		},
 		closed = false,
 		sbuffer = '',
 		spos = 1,

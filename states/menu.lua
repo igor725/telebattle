@@ -23,6 +23,7 @@ function _M:run(tc)
 					return true
 				end
 			end
+
 			coroutine.yield()
 		end
 
