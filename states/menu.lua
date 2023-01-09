@@ -64,15 +64,17 @@ function _M:run(tc)
 			local key = me:waitForInput()
 			if key == 'enter' then
 				me:clearFromCur(42, 1)
-				id = tonumber(id)
-				local opp = self.priv[id]
-				if opp then
-					game:new(me, opp)
-					self.priv[id] = nil
-					return true
-				end
-
+				local nid = tonumber(id)
 				id = ''
+
+				if nid then
+					local opp = self.priv[nid]
+					if opp then
+						game:new(me, opp)
+						self.priv[nid] = nil
+						return true
+					end
+				end
 			elseif key == 'backspace' then
 				if #id > 0 then
 					id = id:sub(1, -2)

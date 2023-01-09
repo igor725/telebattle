@@ -32,7 +32,7 @@ local cmds = {
 
 function _T:read(count)
 	count = tonumber(count)
-	local buf, data, err = ''
+	local buf, data, err
 
 	while not self.dead do
 		data, err, buf = self.fd:receive(count or '*a', buf)
@@ -151,8 +151,8 @@ end
 
 function _T:setCurPos(x, y)
 	self:send(('\x1B[%d;%dH'):format(
-		math.ceil(tonumber(y)),
-		math.ceil(tonumber(x))
+		math.ceil(tonumber(y) or 1),
+		math.ceil(tonumber(x) or 1)
 	))
 end
 
@@ -443,8 +443,7 @@ function _T:configure(dohs)
 			local bufsz = #sbuf
 
 			if bufsz > 0 then
-				local spos, err = self.spos
-				spos, err = fd:send(sbuf, spos)
+				local spos, err = fd:send(sbuf, self.spos)
 				if err == 'closed' then
 					break
 				elseif err ~= nil then
