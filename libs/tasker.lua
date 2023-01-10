@@ -47,8 +47,8 @@ local _T = {
 	onerror = {}
 }
 
-function _T.sleep(sec)
-	local time = gettime() + sec
+function _T.sleep(msec)
+	local time = gettime() + msec
 	while gettime() < time do
 		coroutine.yield()
 	end
@@ -73,9 +73,14 @@ function _T:update()
 				print('coro error', coro, st)
 				local errh = self.onerror[coro]
 				if errh then pcall(errh, st)end
+				self.onerror[coro] = nil
 			end
 		end
 	end
+end
+
+function _T:getCount()
+	return #self.list
 end
 
 function _T:runLoop()

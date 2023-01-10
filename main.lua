@@ -5,7 +5,6 @@ telnet = require('libs.telnet')
 placer = require('libs.placer')
 field = require('libs.field')
 hint = require('libs.hint')
-game = require('states.game')
 menu = require('states.menu')
 
 local info = ljsocket.find_first_address('*', tonumber(arg[1]) or 2425)
@@ -43,8 +42,9 @@ end
 
 tasker:newTask(function()
 	math.randomseed(os.time())
+	local run = true
 
-	while true do
+	while run do
 		local cl
 		repeat
 			cl, err = server:accept()
@@ -52,11 +52,16 @@ tasker:newTask(function()
 				assert(cl:set_blocking(false))
 				telnet:init(cl, true)
 				:setHandler(init)
+			elseif err ~= 'timeout' then
+				run = false
 			end
 		until cl == nil
 
 		coroutine.yield()
 	end
+
+	print('Server socket suddenly died')
+	os.exit(1)
 end, error)
 
 tasker:runLoop()

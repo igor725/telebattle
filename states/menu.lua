@@ -12,12 +12,13 @@ function _M:run(tc)
 
 		while self.wait[me] do
 			if me:lastInput() == 'ctrlc' then
+				self.wait[me] = nil
 				return self:run(me)
 			end
 
 			for otc, waiting in pairs(self.wait) do
 				if otc ~= tc and waiting then
-					game:new(tc, otc)
+					require('states.game'):new(tc, otc)
 					self.wait[tc] = nil
 					self.wait[otc] = nil
 					return true
@@ -45,6 +46,7 @@ function _M:run(tc)
 
 		while self.priv[id] == me do
 			if me:lastInput() == 'ctrlc' then
+				self.priv[id] = nil
 				return self:run(me)
 			end
 
@@ -70,7 +72,7 @@ function _M:run(tc)
 				if nid then
 					local opp = self.priv[nid]
 					if opp then
-						game:new(me, opp)
+						require('states.game'):new(me, opp)
 						self.priv[nid] = nil
 						return true
 					end

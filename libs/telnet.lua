@@ -41,13 +41,16 @@ function _T:read(count)
 			break
 		elseif err == 'timeout' then
 			coroutine.yield()
-		else
+		elseif data then
 			count = count - #data
 			if count == 0 then
 				return buf .. data
 			end
 
 			buf = buf .. data
+		else
+			self:close()
+			break
 		end
 	end
 
@@ -98,7 +101,7 @@ function _T.genMenu(title, buttons)
 			me:send(('\r\n%d. %s'):format(i, tostring(blabel)))
 		end
 
-		while true do
+		while not me:isBroken() do
 			local btn = tonumber(me:waitForInput())
 
 			if btn and buttons[btn] then
@@ -165,6 +168,10 @@ end
 function _T:waitForInput()
 	repeat
 		coroutine.yield()
+
+		if self:isBroken() then
+			return nil
+		end
 	until self.lastkey ~= nil
 
 	return self.lastkey
@@ -456,8 +463,9 @@ function _T:configure(dohs)
 			coroutine.yield()
 		end
 
-		self.dead = true
 		fd:close()
+		self.fd = nil
+		self.dead = true
 	end, fuckit)
 
 	self.configure = false

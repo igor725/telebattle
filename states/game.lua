@@ -17,6 +17,11 @@ local helptext = {
 	'to start the game'
 }
 
+function _Ga:close()
+	self.fields = nil
+	self.placers = nil
+end
+
 function _Ga:fieldOf(pl)
 	return self.fields[pl]
 end
@@ -77,6 +82,7 @@ function _Ga:configure()
 			me:send(text .. '\r\nPress any key to return to the main menu')
 			me:waitForInput()
 			menu:run(me)
+			self:close()
 			return true
 		end
 	end
@@ -182,11 +188,11 @@ function _Ga:configure()
 						local x, y = _hint:getPos()
 
 						if field:hit(x, y) then
-							local wx, wy = field:toWorld(x, y)
-							me:textOn(wx, wy, field:getCharOn(x, y, true))
-							opp:textOn(wx, wy, field:getCharOn(x, y, true))
-
 							if field:isAlive() then
+								local wx, wy = field:toWorld(x, y)
+								me:textOn(wx, wy, field:getCharOn(x, y, true))
+								opp:textOn(wx, wy, field:getCharOn(x, y, true))
+
 								local ship = placer:getShipOn(x, y)
 								if not ship then
 									self.turn = opp
