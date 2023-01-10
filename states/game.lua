@@ -1,5 +1,7 @@
 local _Ga = {}
 _Ga.__index = _Ga
+local hint = require('libs.hint')
+local placer = require('libs.placer')
 
 local helptext = {
 	'Arrows - field cursor navigation',

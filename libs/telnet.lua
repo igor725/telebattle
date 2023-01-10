@@ -202,7 +202,7 @@ function _T:waitForDimsChange()
 	local w, h = self:getDimensions()
 	if w == 0 or h == 0 then return 0, 0 end
 
-	while not self.dead do
+	while not self:isBroken() do
 		local nw, nh = self:getDimensions()
 		if nw ~= w or nh ~= h then
 			return nw, nh
@@ -296,7 +296,6 @@ function _T:configure(dohs)
 
 			local ch = self:read(1)
 			if not ch then
-				self.dead = true
 				break
 			end
 			local chb = ch:byte()
@@ -413,17 +412,32 @@ function _T:configure(dohs)
 			local modes = self.modes
 			while modes.term == nil or modes.naws == nil do
 				coroutine.yield()
+
+				if self:isBroken() then
+					self:close()
+					return
+				end
 			end
 
 			local info = self.info
 			if modes.term then
 				while info.term == nil do
 					coroutine.yield()
+
+					if self:isBroken() then
+						self:close()
+						return
+					end
 				end
 			end
 			if modes.naws then
 				while info.width == nil do
 					coroutine.yield()
+
+					if self:isBroken() then
+						self:close()
+						return
+					end
 				end
 			end
 		end
@@ -438,7 +452,7 @@ function _T:configure(dohs)
 	end, fuckit)
 
 	tasker:newTask(function()
-		while not self.dead do
+		while not self.dead and not self.closing do
 			local sbuf = self.sbuffer
 			local bufsz = #sbuf
 
@@ -456,8 +470,6 @@ function _T:configure(dohs)
 				else
 					self.spos = spos
 				end
-			elseif self.closing then
-				break
 			end
 
 			coroutine.yield()

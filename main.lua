@@ -2,9 +2,7 @@
 ljsocket = require('libs.thirdparty.ljsocket')
 tasker = require('libs.tasker')
 telnet = require('libs.telnet')
-placer = require('libs.placer')
 field = require('libs.field')
-hint = require('libs.hint')
 menu = require('states.menu')
 
 local info = ljsocket.find_first_address('*', tonumber(arg[1]) or 2425)
@@ -35,6 +33,11 @@ local function init(me)
 		))
 
 		ww, wh = me:waitForDimsChange()
+		if me:isBroken() then
+			return false
+		end
+
+		coroutine.yield()
 	end
 
 	return menu:run(me)
