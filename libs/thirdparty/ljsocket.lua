@@ -22,6 +22,10 @@
 	SOFTWARE.
 ]]
 
+---@diagnostic disable: duplicate-set-field
+---@diagnostic disable: undefined-field
+---@diagnostic disable: param-type-mismatch
+
 local ffi = require("ffi")
 local socket = {}
 local e = {}

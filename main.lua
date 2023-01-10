@@ -1,3 +1,4 @@
+#!/usr/bin/env luajit
 ljsocket = require('libs.thirdparty.ljsocket')
 tasker = require('libs.tasker')
 telnet = require('libs.telnet')
