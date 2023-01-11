@@ -276,7 +276,6 @@ local endsym = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ~>=cfghijklmnopqrstuvwxyz'
 
 function _T:configure(dohs)
 	local fd = self.fd
-	assert(fd:set_option('nodelay', true, 'tcp'))
 
 	local function fuckit(err)
 		fd:send('\x1B[2J\x1B[H' .. err)
