@@ -456,19 +456,14 @@ function _T:configure(dohs)
 			local bufsz = #sbuf
 
 			if bufsz > 0 then
-				local spos, err = fd:send(sbuf, self.spos)
+				local spos, err = fd:send(sbuf)
 				if err == 'closed' then
 					break
 				elseif err ~= nil then
 					coroutine.yield()
 				end
 
-				if bufsz == spos then
-					self.sbuffer = ''
-					self.spos = 1
-				else
-					self.spos = spos
-				end
+				self.sbuffer = self.sbuffer:sub(spos + 1)
 			end
 
 			coroutine.yield()
@@ -491,7 +486,6 @@ function _T:init(fd, dohs)
 		},
 		closed = false,
 		sbuffer = '',
-		spos = 1,
 		fd = fd
 	}, self):configure(dohs)
 end
