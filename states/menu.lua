@@ -5,7 +5,10 @@ local _M = {
 }
 
 function _M:run(tc)
-	local function search(me)
+	local searchstate, friendsmenu,
+	mainmenu, aboutmessage
+
+	searchstate = function(me)
 		me:fullClear()
 		me:send('Searching for opponent...\r\nPress Ctrl+C to return to the main menu')
 		self.wait[me] = true
@@ -13,7 +16,7 @@ function _M:run(tc)
 		while self.wait[me] do
 			if me:lastInput() == 'ctrlc' then
 				self.wait[me] = nil
-				return self:run(me)
+				return me:setHandler(mainmenu)
 			end
 
 			for otc, waiting in pairs(self.wait) do
@@ -47,7 +50,7 @@ function _M:run(tc)
 		while self.priv[id] == me do
 			if me:lastInput() == 'ctrlc' then
 				self.priv[id] = nil
-				return self:run(me)
+				return me:setHandler(mainmenu)
 			end
 
 			coroutine.yield()
@@ -55,6 +58,7 @@ function _M:run(tc)
 
 		return true
 	end
+
 	local function friends_enter(me)
 		local id = ''
 		me:fullClear()
@@ -83,7 +87,7 @@ function _M:run(tc)
 					me:send('\8 \8')
 				end
 			elseif key == 'ctrlc' then
-				return self:run(me)
+				return me:setHandler(mainmenu)
 			elseif #key == 1 then
 				local kb = key:byte()
 				if kb >= 48 and kb <= 57 then
@@ -94,17 +98,34 @@ function _M:run(tc)
 		end
 	end
 
-	local friends = telnet.genMenu('Play with friend', {
+	friendsmenu = telnet.genMenu('Play with a friend', {
 		{label = 'Host a game', func = friends_host},
 		{label = 'Enter an existing game', func = friends_enter},
-		{label = 'Go back', func = function(me) return self:run(me) end}
+		{label = 'Go back', func = function(me) return me:setHandler(mainmenu) end}
 	})
 
-	return tc:setHandler(telnet.genMenu('Welcome to the Telnet Battleship!', {
-		{label = 'Search for game', func = function(me) return me:setHandler(search) end},
-		{label = 'Play with a friend', func = function(me) return me:setHandler(friends) end},
+	aboutmessage = function(me)
+		me:fullClear()
+		me:send('Tiny telnet battleship game written in Lua by igor725\r\n')
+		me:send('Source code of this game released under MIT License\r\n')
+		me:send('GitHub repository: https://github.com/igor725/telebattle\r\n')
+		me:send('Press Enter to return to the main menu')
+
+		while me:waitForInput() ~= 'enter' do
+			coroutine.yield()
+		end
+
+		return me:setHandler(mainmenu)
+	end
+
+	mainmenu = telnet.genMenu('Welcome to the Telnet Battleship!', {
+		{label = 'Search for game', func = function(me) return me:setHandler(searchstate) end},
+		{label = 'Play with a friend', func = function(me) return me:setHandler(friendsmenu) end},
+		{label = 'About', func = function(me) return me:setHandler(aboutmessage) end},
 		{label = 'Exit', func = function(me) me:fullClear() me:send('Goodbye!') return false end}
-	}))
+	})
+
+	return tc:setHandler(mainmenu)
 end
 
 return _M
