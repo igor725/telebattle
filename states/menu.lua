@@ -143,7 +143,7 @@ function _M:run(tc)
 		{label = 'Search for game', func = function(me) return me:setHandler(searchstate) end},
 		{label = 'Play with a friend', func = function(me) return me:setHandler(friendsmenu) end},
 		{label = 'About', func = function(me) return me:setHandler(aboutmessage) end},
-		{label = 'Exit', func = function(me) me:fullClear() me:send('Goodbye!') return false end}
+		{label = 'Exit', func = function(me) me:fullClear() me:send('Goodbye!\r\n') return false end}
 	})
 
 	return tc:setHandler(mainmenu)

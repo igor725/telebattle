@@ -82,38 +82,6 @@ function _T:setHandler(func)
 	return true
 end
 
-function _T.genMenu(title, buttons)
-	assert(#buttons < 10, 'Too many options')
-
-	return function(me)
-		me:fullClear()
-		if type(title) == 'function' then
-			me:send(tostring(title(me)))
-		else
-			me:send(tostring(title))
-		end
-
-		for i = 1, #buttons do
-			local blabel = buttons[i].label
-			if type(blabel) == 'function' then
-				blabel = blabel(me)
-			end
-			me:send(('\r\n%d. %s'):format(i, tostring(blabel)))
-		end
-
-		while not me:isBroken() do
-			local btn = tonumber(me:waitForInput())
-
-			if btn and buttons[btn] then
-				local ret = buttons[btn].func(me)
-				if ret ~= nil then
-					return ret
-				end
-			end
-		end
-	end
-end
-
 function _T:decode(...)
 	local c = ...
 	if not c then return end
@@ -451,7 +419,7 @@ function _T:configure(dohs)
 	end, fuckit)
 
 	tasker:newTask(function()
-		while not self.dead and not self.closing do
+		while not self.dead do
 			local sbuf = self.sbuffer
 			local bufsz = #sbuf
 
@@ -464,6 +432,8 @@ function _T:configure(dohs)
 				end
 
 				self.sbuffer = self.sbuffer:sub(spos + 1)
+			elseif self.closing then
+				break
 			end
 
 			coroutine.yield()
@@ -478,16 +448,48 @@ function _T:configure(dohs)
 	return self
 end
 
-function _T:init(fd, dohs)
-	return setmetatable({
-		info = {},
-		modes = {
-			mouse = false
-		},
-		closed = false,
-		sbuffer = '',
-		fd = fd
-	}, self):configure(dohs)
-end
+return {
+	init = function(fd, dohs)
+		return setmetatable({
+			info = {},
+			modes = {
+				mouse = false
+			},
+			closed = false,
+			sbuffer = '',
+			fd = fd
+		}, _T):configure(dohs)
+	end,
 
-return _T
+	genMenu = function(title, buttons)
+		assert(#buttons < 10, 'Too many options')
+
+		return function(me)
+			me:fullClear()
+			if type(title) == 'function' then
+				me:send(tostring(title(me)))
+			else
+				me:send(tostring(title))
+			end
+
+			for i = 1, #buttons do
+				local blabel = buttons[i].label
+				if type(blabel) == 'function' then
+					blabel = blabel(me)
+				end
+				me:send(('\r\n%d. %s'):format(i, tostring(blabel)))
+			end
+
+			while not me:isBroken() do
+				local btn = tonumber(me:waitForInput())
+
+				if btn and buttons[btn] then
+					local ret = buttons[btn].func(me)
+					if ret ~= nil then
+						return ret
+					end
+				end
+			end
+		end
+	end
+}

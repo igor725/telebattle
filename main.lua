@@ -48,7 +48,7 @@ tasker:newTask(function()
 			cl, err = acceptClient(server)
 
 			if cl then
-				telnet:init(cl, true)
+				telnet.init(cl, true)
 				:setHandler(init)
 			elseif err ~= 'timeout' then
 				run = false
