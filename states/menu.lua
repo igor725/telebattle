@@ -68,7 +68,10 @@ function _M:run(tc)
 
 		while true do
 			local key = me:waitForInput()
-			if key == 'enter' then
+
+			if key == nil then
+				break
+			elseif key == 'enter' then
 				me:clearFromCur(42, 1)
 				local nid = tonumber(id)
 				id = ''

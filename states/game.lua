@@ -182,6 +182,10 @@ function _Ga:configure()
 			me:clearFromCur()
 			while self.turn == me do
 				local key = me:waitForInput()
+				if key == nil then
+					self:finish()
+					return false
+				end
 
 				if not _hint:update(key) then
 					if key == 'enter' then
@@ -283,6 +287,10 @@ function _Ga:configure()
 
 		while self.active do
 			local key = me:waitForInput()
+			if not key then
+				self:finish()
+				return false
+			end
 			local x, y = _hint:getPos()
 
 			if not _hint:update(key) then

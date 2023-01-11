@@ -74,21 +74,23 @@ function _H:movedir(dc, dr)
 end
 
 function _H:update(ch)
-	if self:handleKey(ch) then
+	if type(ch) ~= 'string' then
+		return false
+	elseif self:handleKey(ch) then
 		return true
 	elseif #ch > 1 then
 		return false
 	end
 
-	ch = ch:byte()
+	local chb = ch:byte()
 
 	self:place(nil)
-	if ch > 47 and ch < 58 then
-		self:setRowHint(ch - 48)
-	elseif ch > 64 and ch < 75 then
-		self:setColHint(ch - 65)
-	elseif ch > 96 and ch < 107 then
-		self:setColHint(ch - 97)
+	if chb > 47 and chb < 58 then
+		self:setRowHint(chb - 48)
+	elseif chb > 64 and chb < 75 then
+		self:setColHint(chb - 65)
+	elseif chb > 96 and chb < 107 then
+		self:setColHint(chb - 97)
 	else
 		self:place('*')
 		return false

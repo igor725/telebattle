@@ -21,7 +21,8 @@ local function init(me)
 
 	while wh < fh or ww < fw do
 		me:fullClear()
-		me:send(('Your terminal window is too small, resize it please\r\nE: (%d, %d)\r\nG: (%d, %d)'):format(
+		me:send('Your terminal window is too small, resize it please')
+		me:send(('\r\nE: (%d, %d)\r\nG: (%d, %d)'):format(
 			fw, fh, ww, wh
 		))
 
