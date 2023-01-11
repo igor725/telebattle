@@ -48,10 +48,11 @@ end
 
 function _Ga:waitStart(tc)
 	while self.active and self.state < 2 do
+		coroutine.yield()
+
 		if tc:isBroken() then
 			return false
 		end
-		coroutine.yield()
 	end
 
 	return self.active
@@ -59,10 +60,11 @@ end
 
 function _Ga:waitTurn(tc)
 	while self.active and self.turn ~= tc do
+		coroutine.yield()
+
 		if tc:isBroken() then
 			return false
 		end
-		coroutine.yield()
 	end
 
 	return self.active
@@ -176,9 +178,10 @@ function _Ga:configure()
 		while self.active do
 			me:textOn(1, status, 'Opponent\'s turn')
 			if not self:waitTurn(me) then
-				break
+				self:finish()
+				return false
 			end
-			me:textOn(1, status, 'Your turn!')
+			me:textOn(1, status, 'Your turn!\a')
 			me:clearFromCur()
 			while self.turn == me do
 				local key = me:waitForInput()
