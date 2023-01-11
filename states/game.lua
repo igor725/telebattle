@@ -179,7 +179,7 @@ function _Ga:configure()
 			me:textOn(1, status, 'Opponent\'s turn')
 			if not self:waitTurn(me) then
 				self:finish()
-				return false
+				break
 			end
 			me:textOn(1, status, 'Your turn!\a')
 			me:clearFromCur()
