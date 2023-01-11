@@ -23,8 +23,8 @@ local ship_mt = {
 		local sx, sy = self:getPos()
 		local len = self:getLength()
 
-		return x >= sx and x <= sx + len * dx and
-		y >= sy and y <= sy + len * dy
+		return x >= sx and x <= sx + len * dx - (dx * 1) and
+		y >= sy and y <= sy + len * dy - (dy * 1)
 	end,
 
 	attack = function(self)

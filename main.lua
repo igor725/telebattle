@@ -38,6 +38,7 @@ local function init(me)
 end
 
 tasker:newTask(function()
+	menu:init()
 	math.randomseed(os.time())
 	local run = true
 

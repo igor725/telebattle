@@ -1,8 +1,19 @@
 local _M = {
 	wait = {},
 	priv = {},
+	motd = {},
 	start = os.time()
 }
+
+function _M:init()
+	local motd = io.open('motd.txt', 'r')
+	if motd then
+		for line in motd:lines() do
+			table.insert(self.motd, line)
+		end
+		motd:close()
+	end
+end
 
 function _M:run(tc)
 	local searchstate, friendsmenu,
@@ -112,6 +123,13 @@ function _M:run(tc)
 		me:send('Tiny telnet battleship game written in Lua by igor725\r\n')
 		me:send('Source code of this game released under MIT License\r\n')
 		me:send('GitHub repository: https://github.com/igor725/telebattle\r\n')
+		local motd = self.motd
+		if #motd > 0 then
+			me:send('\r\nMOTD:\r\n')
+			for i = 1, #motd do
+				me:send(motd[i] .. '\r\n')
+			end
+		end
 		me:send('Press Enter to return to the main menu')
 
 		while me:waitForInput() ~= 'enter' do

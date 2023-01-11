@@ -207,8 +207,8 @@ function _Ga:configure()
 										local len = ship:getLength()
 										local sx, sy = ship:getPos()
 										local dx, dy = ship:getDirection()
-										for i = math.max(0, sy - 1), math.min(9, sy + (len * dy) + 1 * dx) do
-											for j = math.max(0, sx - 1), math.min(9, sx + (len * dx) + 1 * dy) do
+										for i = math.max(0, sy - 1), math.min(9, sy + (len * dy) + (1 * dx)) do
+											for j = math.max(0, sx - 1), math.min(9, sx + (len * dx) + (1 * dy)) do
 												if field:hit(j, i) then
 													local nwx, nwy = field:toWorld(j, i)
 													me:textOn(nwx, nwy, field:getCharOn(j, i, true))
