@@ -20,8 +20,8 @@ local _T = {
 }
 _T.signal.__index = _T.signal
 
-function _T.sleep(msec)
-	local time = gettime() + msec
+function _T.sleep(sec)
+	local time = gettime() + sec
 	while gettime() < time do
 		coroutine.yield()
 	end
@@ -64,8 +64,12 @@ end
 
 function _T:runLoop()
 	while true do
+		local start = gettime()
 		self:update()
-		sleep(0.016)
+		local elap = gettime() - start
+		if elap < 0.031 then
+			sleep(0.031 - elap)
+		end
 	end
 end
 

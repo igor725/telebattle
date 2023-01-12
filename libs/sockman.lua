@@ -29,25 +29,27 @@ if not succ then
 		gettime = function()
 			local li = ffi.new(lit)
 			C.GetSystemTimeAsFileTime(li[0])
-			return li[0].quad / 10000ULL
+			local time = tonumber(li[0].u.low) / 1.0e7 +
+				tonumber(li[0].u.high) * (4294967296.0 / 1.0e7)
+			return (time - 11644473600.0)
 		end
 	else
 		ffi.cdef[[
-			struct timespec {
+			struct timeval {
 				long tv_sec;
 				long tv_usec;
 			};
 
 			void usleep(unsigned int us);
-			int clock_gettime(int, struct timespec *);
+			int gettimeofday(struct timeval *, void *);
 		]]
 
-		sleep = function(ms)C.usleep(math.floor(1000000 * ms))end
-		local tst = ffi.typeof('struct timespec[1]');
+		sleep = function(ms)C.usleep(math.floor(ms * 1000000))end
+		local tst = ffi.typeof('struct timeval[1]');
 		gettime = function()
 			local ts = ffi.new(tst)
-			C.clock_gettime(0, ts)
-			return ts[0].tv_sec * 1000 + ts[0].tv_usec / 1000;
+			C.gettimeofday(ts, 0)
+			return tonumber(ts[0].tv_sec) + tonumber(ts[0].tv_usec) / 1.0e6
 		end
 	end
 
