@@ -109,6 +109,11 @@ function _Ga:configure()
 					return me:setHandler(function()
 						while self.state == 4 do
 							coroutine.yield()
+
+							if me:isBroken() then
+								self.state = -1
+								return false
+							end
 						end
 
 						if self.state == -1 then
@@ -125,6 +130,11 @@ function _Ga:configure()
 						me:send('Waiting for other player....')
 						while self.state == 3 do
 							coroutine.yield()
+
+							if me:isBroken() then
+								self.state = -1
+								return false
+							end
 						end
 
 						if self.state == -1 then
