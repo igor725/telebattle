@@ -139,9 +139,41 @@ function _M:run(tc)
 		return me:setHandler(mainmenu)
 	end
 
+	local togglecolors = function(me)
+		me:fullClear()
+		if me:enableColors(not me:hasColors()) then
+			if me:supportColors() then
+				return me:setHandler(mainmenu)
+			end
+
+			me:putColor(32)
+			me:send('If this text is green press Y, if not press N')
+			me:putColor(0)
+
+			while true do
+				local key = me:waitForInput()
+				if key == 'y' then
+					return me:setHandler(mainmenu)
+				elseif key == 'n' then
+					me:enableColors(false)
+					return me:setHandler(mainmenu)
+				end
+			end
+		else
+			return me:setHandler(mainmenu)
+		end
+	end
+
 	mainmenu = telnet.genMenu('Welcome to the Telnet Battleship!', {
 		{label = 'Search for game', func = function(me) return me:setHandler(searchstate) end},
 		{label = 'Play with a friend', func = function(me) return me:setHandler(friendsmenu) end},
+		{label = function(me)
+			return 'Toggle ' ..
+				(
+					me:hasColors() and '\x1B[31mc\x1B[32mo\x1B[34ml\x1B[36mo\x1B[35mr\x1B[33ms\x1B[0m [X]'
+					or 'colors [ ]'
+				)
+		end, func = togglecolors},
 		{label = 'About', func = function(me) return me:setHandler(aboutmessage) end},
 		{label = 'Exit', func = function(me) me:fullClear() me:send('Goodbye!\r\n') return false end}
 	})

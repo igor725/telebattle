@@ -34,6 +34,7 @@ local function init(me)
 		coroutine.yield()
 	end
 
+	me:enableColors(me:supportColors())
 	return menu:run(me)
 end
 

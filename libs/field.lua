@@ -3,6 +3,11 @@ _F.__index = _F
 
 local header = '  A B C D E F G H I J'
 local line = ' +-+-+-+-+-+-+-+-+-+-+'
+local colors = {
+	['-'] = '\x1B[35m-\x1B[0m',
+	['X'] = '\x1B[31mX\x1B[0m',
+	['#'] = '\x1B[34m#\x1B[0m'
+}
 
 function _F:draw(tc, dontmove, hits)
 	local xpos = dontmove and 1 or (self:getPos() + 1)
@@ -14,7 +19,7 @@ function _F:draw(tc, dontmove, hits)
 		tc:textOn(xpos, y, string.char(48 + i) .. '|')
 		for j = 0, 9 do
 			tc:send(('%s|'):format(
-				self:getCharOn(j, i, hits)
+				self:getCharOn(j, i, hits, tc:hasColors())
 			))
 		end
 		tc:textOn(xpos, y + 1, line)
@@ -51,11 +56,13 @@ function _F:setCharOn(x, y, c)
 	self.matrix[y][x][1] = c
 end
 
-function _F:getCharOn(x, y, hit)
+function _F:getCharOn(x, y, hit, clr)
 	local mat = self.matrix[y][x]
 	local cval = mat[1]
-	if not hit then return cval end
-	return mat[2] and (cval ~= ' ' and 'X' or '-') or ' '
+	if not hit then return (clr and colors[cval]) or cval end
+	local char = (mat[2] and (cval ~= ' ' and 'X' or '-')) or ' '
+	if clr then return colors[char] or char end
+	return char
 end
 
 function _F.getDimensions()

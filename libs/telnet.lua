@@ -203,6 +203,29 @@ function _T:toggleMouse()
 	end
 end
 
+function _T:supportColors()
+	local name = self:getTerminal()
+	return
+		name:find('color', 1, true) ~= nil
+		or name:find('XTERM', 1, true) ~= nil
+end
+
+function _T:enableColors(val)
+	local modes = self.modes
+	modes.colors = (val == true) or (val == nil)
+	return modes.colors
+end
+
+function _T:hasColors()
+	return self.modes.colors == true
+end
+
+function _T:putColor(color)
+	if self.modes.colors then
+		self:send('\x1B[' .. tostring(color) .. 'm')
+	end
+end
+
 local keys = {
 	['A'] = 'aup',
 	['B'] = 'adown',
@@ -231,9 +254,11 @@ local negotiators = {
 
 			if char ~= cmds.IAC then
 				name = name .. char
+				assert(#name < 32, 'Terminal name is too long')
 			else
 				assert(tc:read(1) == cmds.SE)
 				tc.info.term = name
+
 				return true
 			end
 		end
@@ -315,14 +340,14 @@ function _T:configure(dohs)
 					end
 				end
 			elseif chb < 0x20 then
-				if ch ~= '\r' then
+				if ch ~= '\n' then
 					if ch == '\3' then
 						self.lastkey = 'ctrlc'
 					elseif ch == '\8' then
 						self.lastkey = 'backspace'
 					elseif ch == '\t' then
 						self.lastkey = 'tab'
-					elseif ch == '\n' then
+					elseif ch == '\r' then
 						self.lastkey = 'enter'
 					end
 				end
@@ -453,6 +478,7 @@ return {
 		return setmetatable({
 			info = {},
 			modes = {
+				colors = false,
 				mouse = false
 			},
 			closed = false,

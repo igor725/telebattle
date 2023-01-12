@@ -40,10 +40,12 @@ end
 function _H:place(char)
 	local col = self.col
 	local row = self.row
+	local tc = self.tc
+
 	if col and row then
-		self.tc:textOn(
+		tc:textOn(
 			self.offset + 3 + (col * 2), 3 + (row * 2),
-			char or self.field:getCharOn(col, row, self.hide)
+			char or self.field:getCharOn(col, row, self.hide, tc:hasColors())
 		)
 	end
 end

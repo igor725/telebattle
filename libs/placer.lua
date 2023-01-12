@@ -63,7 +63,7 @@ function _P:testSpace(x, y, t, dir, ignid)
 
 	for i = math.max(0, y - 1), math.min(9, ey + 1) do
 		for j = math.max(0, x - 1), math.min(9, ex + 1) do
-			if field:getCharOn(j, i) ~= ' ' then
+			if field:getCharOn(j, i, false) ~= ' ' then
 				if ignid == nil or select(2, self:getShipOn(j, i)) ~= ignid then
 					return false
 				end

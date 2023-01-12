@@ -199,8 +199,8 @@ function _Ga:configure()
 						if field:hit(x, y) then
 							if field:isAlive() then
 								local wx, wy = field:toWorld(x, y)
-								me:textOn(wx, wy, field:getCharOn(x, y, true))
-								opp:textOn(wx, wy, field:getCharOn(x, y, true))
+								me:textOn(wx, wy, field:getCharOn(x, y, true, me:hasColors()))
+								opp:textOn(wx, wy, field:getCharOn(x, y, true, opp:hasColors()))
 
 								local ship = placer:getShipOn(x, y)
 								if not ship then
@@ -214,8 +214,8 @@ function _Ga:configure()
 											for j = math.max(0, sx - 1), math.min(9, sx + (len * dx) + (1 * dy)) do
 												if field:hit(j, i) then
 													local nwx, nwy = field:toWorld(j, i)
-													me:textOn(nwx, nwy, field:getCharOn(j, i, true))
-													opp:textOn(nwx, nwy, field:getCharOn(j, i, true))
+													me:textOn(nwx, nwy, field:getCharOn(j, i, true, me:hasColors()))
+													opp:textOn(nwx, nwy, field:getCharOn(j, i, true, opp:hasColors()))
 												end
 											end
 										end
