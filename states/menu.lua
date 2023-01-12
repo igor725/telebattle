@@ -152,7 +152,10 @@ function _M:run(tc)
 
 			while true do
 				local key = me:waitForInput()
-				if key == 'y' then
+
+				if key == nil then
+					return false
+				elseif key == 'y' then
 					return me:setHandler(mainmenu)
 				elseif key == 'n' then
 					me:enableColors(false)

@@ -1,7 +1,24 @@
 local _T = {
 	list = {},
-	onerror = {}
+	onerror = {},
+	signal = {
+		signal = function(self)
+			self.signaled = true
+		end,
+		reset = function(self)
+			self.signaled = false
+		end,
+		wait = function(self)
+			while not self.signaled do
+				coroutine.yield()
+			end
+		end,
+		isSignaled = function(self)
+			return self.signaled
+		end
+	}
 }
+_T.signal.__index = _T.signal
 
 function _T.sleep(msec)
 	local time = gettime() + msec
@@ -16,6 +33,12 @@ function _T:newTask(func, errh)
 	end)
 	table.insert(self.list, coro)
 	self.onerror[coro] = errh
+end
+
+function _T:newSignal()
+	return setmetatable({
+		signaled = false
+	}, self.signal)
 end
 
 function _T:update()

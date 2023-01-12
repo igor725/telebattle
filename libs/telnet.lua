@@ -133,12 +133,14 @@ function _T:textOn(x, y, text)
 	self:send(text)
 end
 
-function _T:waitForInput()
+function _T:waitForInput(signal)
 	repeat
 		coroutine.yield()
 
 		if self:isBroken() then
-			return nil
+			return nil, 'closed'
+		elseif signal and signal:isSignaled() then
+			return nil, 'signaled'
 		end
 	until self.lastkey ~= nil
 
@@ -166,7 +168,7 @@ function _T:getTerminal()
 	return self.info.term
 end
 
-function _T:waitForDimsChange()
+function _T:waitForDimsChange(signal)
 	local w, h = self:getDimensions()
 	if w == 0 or h == 0 then return 0, 0 end
 
@@ -177,6 +179,9 @@ function _T:waitForDimsChange()
 		end
 
 		coroutine.yield()
+		if signal and signal:isSignaled() then
+			return w, h, 'signaled'
+		end
 	end
 
 	return w, h
@@ -507,7 +512,9 @@ return {
 			end
 
 			while not me:isBroken() do
-				local btn = tonumber(me:waitForInput())
+				local btn, err = me:waitForInput()
+				if err then return false end
+				btn = tonumber(btn)
 
 				if btn and buttons[btn] then
 					local ret = buttons[btn].func(me)

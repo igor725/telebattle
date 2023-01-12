@@ -1,5 +1,6 @@
 local _Ga = {}
 _Ga.__index = _Ga
+local field = require('libs.field')
 local hint = require('libs.hint')
 local placer = require('libs.placer')
 
@@ -78,6 +79,7 @@ end
 
 function _Ga:configure()
 	local gamestate, placingstate
+	local signal = tasker:newSignal()
 	local scores = {}
 
 	local function makemessage(text)
@@ -148,6 +150,9 @@ function _Ga:configure()
 	gamestate = function(me)
 		local myfield = self:fieldOf(me)
 		local w, h = myfield:getDimensions()
+		local alivex = w + 36
+		local yoursx = alivex + 10
+		local oppsx = alivex + 20
 		local status = h + 4
 		local title = h + 2
 		local _hint, opp
@@ -159,12 +164,19 @@ function _Ga:configure()
 			return true
 		end
 
-		me:fullClear()
+		me:fullClear() me:send('\a')
 		for owner, field in pairs(self.fields) do
 			local hide = owner ~= me
 			local xpos = field:getPos()
 			local text
 			field:draw(me, false, hide)
+			owner:textOn(alivex, 1, 'Ships | Yours | Opponent\'s')
+			for i = 0, 3 do
+				owner:textOn(alivex, 2 + i, ('%+5s |   %d   |     %d'):format(
+					('#'):rep(i + 1), 4 - i, 4 - i
+				))
+			end
+
 			if hide then
 				opp = owner
 				text = 'Opponent\'s field'
@@ -174,6 +186,8 @@ function _Ga:configure()
 			end
 			me:textOn(xpos + (w - #text) / 2, title, text)
 		end
+		me:textOn(alivex, 7, ('Your score: %d'):format(scores[me] or 0))
+		me:textOn(alivex, 8, ('Opponent\'s score: %d'):format(scores[opp] or 0))
 
 		while self.active do
 			me:textOn(1, status, 'Opponent\'s turn')
@@ -184,10 +198,15 @@ function _Ga:configure()
 			me:textOn(1, status, 'Your turn!\a')
 			me:clearFromCur()
 			while self.turn == me do
-				local key = me:waitForInput()
+				local key, err = me:waitForInput(signal)
 				if key == nil then
 					self:finish()
-					return false
+					if err == 'signaled' then
+						signal:signal()
+						break
+					elseif err == 'closed' then
+						return false
+					end
 				end
 
 				if not _hint:update(key) then
@@ -207,6 +226,12 @@ function _Ga:configure()
 									self.turn = opp
 								else
 									if ship:attack() then
+										local type = ship:getType()
+										local ypos = 2 + type
+										local avail = placer:aliveCount(type)
+										opp:textOn(yoursx, ypos, avail)
+										me:textOn(oppsx, ypos, avail)
+
 										local len = ship:getLength()
 										local sx, sy = ship:getPos()
 										local dx, dy = ship:getDirection()
@@ -238,6 +263,7 @@ function _Ga:configure()
 
 		if self.winner == nil then
 			me:setHandler(makemessage('Opponent left the game'))
+			signal:signal()
 		end
 
 		return true
@@ -289,11 +315,18 @@ function _Ga:configure()
 		end
 
 		while self.active do
-			local key = me:waitForInput()
-			if not key then
+			local key, err = me:waitForInput(signal)
+
+			if key == nil then
 				self:finish()
-				return false
+				if err == 'closed' then
+					signal:signal()
+					return false
+				elseif err == 'signaled' then
+					break
+				end
 			end
+
 			local x, y = _hint:getPos()
 
 			if not _hint:update(key) then
@@ -347,6 +380,7 @@ function _Ga:configure()
 		end
 
 		me:setHandler(makemessage('Opponent left the game'))
+		signal:signal()
 		return true
 	end
 

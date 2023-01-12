@@ -1,7 +1,6 @@
 #!/usr/bin/env luajit
 tasker = require('libs.tasker')
 telnet = require('libs.telnet')
-field = require('libs.field')
 menu = require('states.menu')
 require('libs.sockman')
 
@@ -16,15 +15,11 @@ local function init(me)
 	me:send('Waiting for telnet to respond...')
 
 	local ww, wh = me:getDimensions()
-	local fw, fh = field.getDimensions()
-	fw, fh = fw * 3, fh + 4
 
-	while wh < fh or ww < fw do
+	while wh < 26 or ww < 83 do
 		me:fullClear()
 		me:send('Your terminal window is too small, resize it please')
-		me:send(('\r\nE: (%d, %d)\r\nG: (%d, %d)'):format(
-			fw, fh, ww, wh
-		))
+		me:send(('\r\nE: (83, 26)\r\nG: (%d, %d)'):format(ww, wh))
 
 		ww, wh = me:waitForDimsChange()
 		if me:isBroken() then

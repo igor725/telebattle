@@ -18,6 +18,14 @@ local ship_mt = {
 		return self.len - 1
 	end,
 
+
+	isType = function(self, t)
+		return self.len - t == 1
+	end,
+	isAlive = function(self)
+		return self.health > 0
+	end,
+
 	collidedWith = function(self, x, y)
 		local dx, dy = self:getDirection()
 		local sx, sy = self:getPos()
@@ -179,6 +187,18 @@ end
 
 function _P:getAvail(i)
 	return self.avail[i]
+end
+
+function _P:aliveCount(t)
+	local placed = self.placed
+	local cnt = 0
+	for i = 1, #placed do
+		local ship = placed[i]
+		if ship:isType(t) and ship:isAlive() then
+			cnt = cnt + 1
+		end
+	end
+	return cnt
 end
 
 function _P:isReady()
