@@ -79,6 +79,17 @@ function _F:getPos()
 	return self.index * 32
 end
 
+function _F:reset()
+	local m = self.matrix
+	for i = 0, 9 do
+		local r = m[i]
+		for j = 0, 9 do
+			local c = r[j]
+			c[1], c[2] = ' ', false
+		end
+	end
+end
+
 function _F:configure()
 	local f = self.matrix
 	for i = 0, 9 do

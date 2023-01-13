@@ -23,6 +23,8 @@ local helptext = {
 function _Ga:close()
 	self.fields = nil
 	self.placers = nil
+	self.closed = true
+	self.state = -1
 end
 
 function _Ga:fieldOf(pl)
@@ -72,6 +74,10 @@ function _Ga:waitTurn(tc)
 end
 
 function _Ga:getOpponentOf(pl)
+	if self.fields == nil then
+		return -1
+	end
+
 	for opp in pairs(self.fields) do
 		if opp ~= pl then return opp end
 	end
@@ -104,14 +110,14 @@ function _Ga:configure()
 			func = function(me)
 				if self.state == -1 then
 					return me:setHandler(refused)
-				elseif self.state == 3 then -- Новая игра уже запрошена вторым игроком
-					self.state = 4
+				elseif self.state == 4 then -- Новая игра уже запрошена вторым игроком
+					self.state = 5
 					return me:setHandler(function()
-						while self.state == 4 do
+						while self.state == 5 do
 							coroutine.yield()
 
 							if me:isBroken() then
-								self.state = -1
+								self:close()
 								return false
 							end
 						end
@@ -120,19 +126,21 @@ function _Ga:configure()
 							return me:setHandler(refused)
 						end
 
-						self:placerOf(self:fieldOf(me)):removeAll()
+						local _field = self:fieldOf(me)
+						_field:reset()
+						self:placerOf(_field):removeAll()
 						return me:setHandler(placingstate)
 					end)
-				elseif self.state == 2 then -- Новая игра ещё не была запрошена
-					self.turn, self.state, self.active = nil, 3, true
+				elseif self.state == 3 then -- Новая игра ещё не была запрошена
+					self.turn, self.state, self.active = nil, 4, true
 					return me:setHandler(function()
 						me:fullClear()
 						me:send('Waiting for other player....')
-						while self.state == 3 do
+						while self.state == 4 do
 							coroutine.yield()
 
 							if me:isBroken() then
-								self.state = -1
+								self:close()
 								return false
 							end
 						end
@@ -142,7 +150,9 @@ function _Ga:configure()
 						end
 
 						self.state = 0
-						self:placerOf(self:fieldOf(me)):removeAll()
+						local _field = self:fieldOf(me)
+						_field:reset()
+						self:placerOf(_field):removeAll()
 						return me:setHandler(placingstate)
 					end)
 				end
@@ -151,15 +161,14 @@ function _Ga:configure()
 		{
 			label = 'Exit to main menu',
 			func = function(me)
-				self.state = -1
+				self:close()
 				return menu:run(me)
 			end
 		}
 	})
 
 	gamestate = function(me)
-		local myfield = self:fieldOf(me)
-		local w, h = myfield:getDimensions()
+		local w, h = self:fieldOf(me):getDimensions()
 		local alivex = w + 36
 		local yoursx = alivex + 10
 		local oppsx = alivex + 20
@@ -199,7 +208,9 @@ function _Ga:configure()
 		me:textOn(alivex, 7, ('Your score: %d'):format(scores[me] or 0))
 		me:textOn(alivex, 8, ('Opponent\'s score: %d'):format(scores[opp] or 0))
 
+		self.lttime = gettime()
 		while self.active do
+			signal:reset()
 			me:textOn(1, status, 'Opponent\'s turn')
 			if not self:waitTurn(me) then
 				self:finish()
@@ -210,11 +221,10 @@ function _Ga:configure()
 			while self.turn == me do
 				local key, err = me:waitForInput(signal)
 				if key == nil then
-					self:finish()
 					if err == 'signaled' then
-						signal:signal()
 						break
 					elseif err == 'closed' then
+						self:finish()
 						return false
 					end
 				end
@@ -227,6 +237,7 @@ function _Ga:configure()
 
 						if field:hit(x, y) then
 							if field:isAlive() then
+								self.lttime = gettime()
 								local wx, wy = field:toWorld(x, y)
 								me:textOn(wx, wy, field:getCharOn(x, y, true, me:hasColors()))
 								opp:textOn(wx, wy, field:getCharOn(x, y, true, opp:hasColors()))
@@ -261,6 +272,7 @@ function _Ga:configure()
 								self:finish(me)
 								me:setHandler(endgame)
 								opp:setHandler(endgame)
+								self.state = 3
 								break
 							end
 						end
@@ -274,18 +286,19 @@ function _Ga:configure()
 		if self.winner == nil then
 			me:setHandler(makemessage('Opponent left the game'))
 			signal:signal()
+			self:close()
 		end
 
 		return true
 	end
 
 	placingstate = function(me)
-		local myfield = self:fieldOf(me)
-		local _placer = self:placerOf(myfield)
-		local _hint = hint:new(me, myfield, false, true)
-		local w = myfield:getDimensions()
+		local _field = self:fieldOf(me)
+		local _placer = self:placerOf(_field)
+		local _hint = hint:new(me, _field, false, true)
+		local w = _field:getDimensions()
 		me:fullClear()
-		myfield:draw(me, true)
+		_field:draw(me, true)
 		local shoff = w + 4
 		local marker = shoff + 12
 		local selected = 0
@@ -342,16 +355,16 @@ function _Ga:configure()
 			if not _hint:update(key) then
 				if key == 'r' then
 					if _placer:rotate(x, y) then
-						myfield:draw(me, true)
+						_field:draw(me, true)
 					end
 				elseif key == 'z' then
 					if _placer:removeAll() then
-						myfield:draw(me, true)
+						_field:draw(me, true)
 						updateShipInfo()
 					end
 				elseif key == 'p' then
 					_placer:randomPlace()
-					myfield:draw(me, true)
+					_field:draw(me, true)
 					updateShipInfo()
 				elseif key == 'm' then
 					local sh, id = _placer:getShipOn(x, y)
@@ -360,7 +373,7 @@ function _Ga:configure()
 							local sht = sh:getType()
 							updateShipInfo(sht)
 							updateShipSelection(sht)
-							myfield:draw(me, true)
+							_field:draw(me, true)
 							_hint:update('\0')
 						end
 					end
@@ -377,7 +390,7 @@ function _Ga:configure()
 					else
 						if _placer:place(x, y, selected) then
 							updateShipInfo(selected)
-							myfield:draw(me, true)
+							_field:draw(me, true)
 							if _placer:getAvail(selected) < 1 then
 								selectNext()
 							end
@@ -391,6 +404,7 @@ function _Ga:configure()
 
 		me:setHandler(makemessage('Opponent left the game'))
 		signal:signal()
+		self:close()
 		return true
 	end
 
@@ -399,6 +413,43 @@ function _Ga:configure()
 		pl:setHandler(placingstate)
 	end
 
+	tasker:newTask(function()
+		local lturn, nextbell
+		local tdiff, skips = 0, 0
+		-- local pltimeout = 300
+		local timeout = 30
+
+		while not self.closed do
+			if self.state == 2 then
+				if lturn ~= self.turn then
+					lturn = self.turn
+					nextbell = timeout - 5
+					if tdiff >= timeout then
+						skips = skips + 1
+						if skips == 4 then
+							signal:signal()
+							self:finish()
+						end
+					else
+						skips = 0
+					end
+				else
+					tdiff = gettime() - self.lttime
+					if tdiff >= timeout then
+						signal:signal()
+						self.turn = self:getOpponentOf(lturn)
+						self.lttime = gettime()
+					elseif tdiff >= nextbell then
+						nextbell = nextbell + 1
+						lturn:send('\a')
+					end
+				end
+			end
+
+			coroutine.yield()
+		end
+	end)
+
 	self.configure = false
 	return self
 end
@@ -406,6 +457,7 @@ end
 function _Ga:new(p1, p2)
 	return setmetatable({
 		active = true,
+		closed = false,
 		turn = nil,
 		state = 0,
 		placers = {},
