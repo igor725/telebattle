@@ -20,6 +20,14 @@ local _T = {
 }
 _T.signal.__index = _T.signal
 
+function _T.defErrHand(coro, err)
+	local fmts = ('coroutine[%p] died: %s\r\n%s\r\n'):format(
+		coro, err, debug.traceback(coro):gsub('\n', '\r\n')
+	)
+	io.stderr:write(fmts)
+	return fmts
+end
+
 function _T.sleep(sec)
 	local time = gettime() + sec
 	while gettime() < time do
@@ -49,9 +57,8 @@ function _T:update()
 		if ret == false or st == true then
 			table.remove(coros, i)
 			if ret == false then
-				print('coro error', coro, st)
-				local errh = self.onerror[coro]
-				if errh then pcall(errh, st)end
+				local errh = self.onerror[coro] or tasker.defErrHand
+				if errh then pcall(errh, coro, st)end
 				self.onerror[coro] = nil
 			end
 		end

@@ -25,8 +25,7 @@ local ship_mt = {
 	isAlive = function(self)
 		return self.health > 0
 	end,
-
-	collidedWith = function(self, x, y)
+	isCollidedWith = function(self, x, y)
 		local dx, dy = self:getDirection()
 		local sx, sy = self:getPos()
 		local len = self:getLength()
@@ -55,7 +54,7 @@ function _P:getShipOn(x, y)
 	local placed = self.placed
 
 	for i = 1, #placed do
-		if placed[i]:collidedWith(x, y) then
+		if placed[i]:isCollidedWith(x, y) then
 			return placed[i], i
 		end
 	end

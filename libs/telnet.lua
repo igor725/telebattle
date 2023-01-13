@@ -275,8 +275,12 @@ local endsym = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ~>=cfghijklmnopqrstuvwxyz'
 function _T:configure(dohs)
 	local fd = self.fd
 
-	local function fuckit(err)
-		fd:send('\x1B[2J\x1B[H' .. err)
+	local function fuckit(coro, err)
+		local sha = GIT_COMMIT or '[unknown]'
+
+		fd:send('\x1B[2J\x1B[H\r\nTelnet panic screen (commit: ')
+		fd:send(sha) fd:send(')\r\n')
+		fd:send(tasker.defErrHand(coro, err))
 		self.dead = true
 		fd:close()
 	end
@@ -479,6 +483,10 @@ function _T:configure(dohs)
 end
 
 return {
+	_NAME = 'telnet.lua',
+	_VERSION = '0.1',
+	_LICENSE = 'MIT',
+
 	init = function(fd, dohs)
 		return setmetatable({
 			info = {},

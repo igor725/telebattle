@@ -4,6 +4,12 @@ telnet = require('libs.telnet')
 menu = require('states.menu')
 require('libs.sockman')
 
+local grevparse = io.popen('git rev-parse --short HEAD', 'r')
+if grevparse then
+	GIT_COMMIT = grevparse:read("*l")
+	grevparse:close()
+end
+
 local server, ip, port = initServer('*', tonumber(arg[1]) or 2425)
 print(('Telnet listener started on: %s:%d'):format(ip, port))
 
@@ -56,6 +62,6 @@ tasker:newTask(function()
 
 	print('Server socket suddenly died')
 	os.exit(1)
-end, error)
+end)
 
 tasker:runLoop()

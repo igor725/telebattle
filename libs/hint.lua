@@ -104,12 +104,11 @@ end
 
 function _H:new(tc, field, hide, dontmove)
 	return setmetatable({
+		tc = tc,
+		field = field,
+		row = 0, col = 0,
 		hide = hide == true,
 		offset = dontmove and 0 or field:getPos(),
-		field = field,
-		tc = tc,
-		row = 0,
-		col = 0
 	}, self)
 end
 
