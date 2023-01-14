@@ -12,13 +12,38 @@ local _T = {
 			while not self.signaled do
 				coroutine.yield()
 			end
+
+			return true
 		end,
 		isSignaled = function(self)
 			return self.signaled
 		end
+	},
+	timeout = {
+		reset = function(self, time)
+			time = (type(time) == 'number' and time or self.time) or 0
+			self.timeout = gettime() + time
+			self.time = time
+			return self
+		end,
+		wait = function(self, reset)
+			while gettime() < self.timeout do
+				coroutine.yield()
+			end
+
+			if reset then
+				self:reset()
+			end
+
+			return true
+		end,
+		isSignaled = function(self)
+			return gettime() < self.timeout
+		end
 	}
 }
 _T.signal.__index = _T.signal
+_T.timeout.__index = _T.timeout
 
 function _T.defErrHand(coro, err)
 	local fmts = ('coroutine[%p] died: %s\r\n%s\r\n'):format(
@@ -33,6 +58,7 @@ function _T.sleep(sec)
 	while gettime() < time do
 		coroutine.yield()
 	end
+	return true
 end
 
 function _T:newTask(func, errh)
@@ -47,6 +73,10 @@ function _T:newSignal()
 	return setmetatable({
 		signaled = false
 	}, self.signal)
+end
+
+function _T:newTimeout(init)
+	return setmetatable({}, self.timeout):reset(init)
 end
 
 function _T:update()

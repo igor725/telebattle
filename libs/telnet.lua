@@ -188,7 +188,7 @@ function _T:waitForDimsChange(signal)
 end
 
 function _T:isMouseEnabled()
-	return self.modes.mouse
+	return self.modes.mouse == true
 end
 
 function _T:getMouseState()
@@ -209,24 +209,21 @@ function _T:toggleMouse()
 end
 
 function _T:supportColors()
-	local name = self:getTerminal()
-	return
-		name:find('color', 1, true) ~= nil
-		or name:find('XTERM', 1, true) ~= nil
-end
-
-function _T:enableColors(val)
-	local modes = self.modes
-	modes.colors = (val == true) or (val == nil)
-	return modes.colors
-end
-
-function _T:hasColors()
 	return self.modes.colors == true
 end
 
+function _T:enableColors(val)
+	local info = self.info
+	info.colors = (val == true) or (val == nil)
+	return info.colors
+end
+
+function _T:hasColors()
+	return self.info.colors == true
+end
+
 function _T:putColor(color)
-	if self.modes.colors then
+	if self:hasColors() then
 		self:send('\x1B[' .. tostring(color) .. 'm')
 	end
 end
@@ -262,8 +259,12 @@ local negotiators = {
 				assert(#name < 32, 'Terminal name is too long')
 			else
 				assert(tc:read(1) == cmds.SE)
+				name = name:lower()
 				tc.info.term = name
-
+				tc.modes.colors = name:find('color', 1, true) ~= nil or
+								  name:find('xterm', 1, true) ~= nil or
+								  name:find('vt100') ~= nil or
+								  name:find('linux') ~= nil
 				return true
 			end
 		end
@@ -489,7 +490,9 @@ return {
 
 	init = function(fd, dohs)
 		return setmetatable({
-			info = {},
+			info = {
+				colors = false
+			},
 			modes = {
 				colors = false,
 				mouse = false

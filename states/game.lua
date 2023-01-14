@@ -180,6 +180,7 @@ function _Ga:configure()
 		me:send('Waiting for opponent to finish placing ships...')
 		if not self:waitStart(me) then
 			me:setHandler(makemessage('Game canceled'))
+			self:close()
 			return true
 		end
 
@@ -231,25 +232,25 @@ function _Ga:configure()
 
 				if not _hint:update(key) then
 					if key == 'enter' then
-						local field = _hint:getField()
-						local placer = self:placerOf(field)
+						local _field = _hint:getField()
+						local _placer = self:placerOf(_field)
 						local x, y = _hint:getPos()
 
-						if field:hit(x, y) then
-							if field:isAlive() then
+						if _field:hit(x, y) then
+							if _field:isAlive() then
 								self.lttime = gettime()
-								local wx, wy = field:toWorld(x, y)
-								me:textOn(wx, wy, field:getCharOn(x, y, true, me:hasColors()))
-								opp:textOn(wx, wy, field:getCharOn(x, y, true, opp:hasColors()))
+								local wx, wy = _field:toWorld(x, y)
+								me:textOn(wx, wy, _field:getCharOn(x, y, true, me:hasColors()))
+								opp:textOn(wx, wy, _field:getCharOn(x, y, true, opp:hasColors()))
 
-								local ship = placer:getShipOn(x, y)
+								local ship = _placer:getShipOn(x, y)
 								if not ship then
 									self.turn = opp
 								else
 									if ship:attack() then
 										local type = ship:getType()
 										local ypos = 2 + type
-										local avail = placer:aliveCount(type)
+										local avail = _placer:aliveCount(type)
 										opp:textOn(yoursx, ypos, avail)
 										me:textOn(oppsx, ypos, avail)
 
@@ -258,10 +259,10 @@ function _Ga:configure()
 										local dx, dy = ship:getDirection()
 										for i = math.max(0, sy - 1), math.min(9, sy + (len * dy) + (1 * dx)) do
 											for j = math.max(0, sx - 1), math.min(9, sx + (len * dx) + (1 * dy)) do
-												if field:hit(j, i) then
-													local nwx, nwy = field:toWorld(j, i)
-													me:textOn(nwx, nwy, field:getCharOn(j, i, true, me:hasColors()))
-													opp:textOn(nwx, nwy, field:getCharOn(j, i, true, opp:hasColors()))
+												if _field:hit(j, i) then
+													local nwx, nwy = _field:toWorld(j, i)
+													me:textOn(nwx, nwy, _field:getCharOn(j, i, true, me:hasColors()))
+													opp:textOn(nwx, nwy, _field:getCharOn(j, i, true, opp:hasColors()))
 												end
 											end
 										end
@@ -408,8 +409,8 @@ function _Ga:configure()
 		return true
 	end
 
-	for pl, field in pairs(self.fields) do
-		self.placers[field] = placer:new(field)
+	for pl, fl in pairs(self.fields) do
+		self.placers[fl] = placer:new(fl)
 		pl:setHandler(placingstate)
 	end
 

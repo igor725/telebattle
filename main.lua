@@ -24,8 +24,11 @@ local function init(me)
 
 	while wh < 26 or ww < 83 do
 		me:fullClear()
-		me:send('Your terminal window is too small, resize it please')
-		me:send(('\r\nE: (83, 26)\r\nG: (%d, %d)'):format(ww, wh))
+		me:send('Your terminal window is too small, resize it please.\r\n')
+		me:send('This check is performed only once,\r\n')
+		me:send('So please DON\'T resize the terminal window after this screen!\r\n')
+		me:send('It may lead to unexpected drawing issues\r\n')
+		me:send(('E: (83, 26)\r\nG: (%d, %d)'):format(ww, wh))
 
 		ww, wh = me:waitForDimsChange()
 		if me:isBroken() then
