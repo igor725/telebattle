@@ -1,6 +1,7 @@
 #!/usr/bin/env luajit
 tasker = require('libs.tasker')
 telnet = require('libs.telnet')
+ocounter = require('libs.ocounter')
 menu = require('states.menu')
 require('libs.sockman')
 
@@ -53,8 +54,9 @@ tasker:newTask(function()
 			cl, err = acceptClient(server)
 
 			if cl then
-				telnet.init(cl, true)
-				:setHandler(init)
+				local tc = telnet.init(cl, true)
+				tc:setHandler(init)
+				ocounter:install(tc)
 			elseif err ~= 'timeout' then
 				run = false
 			end

@@ -18,14 +18,14 @@ if not succ then
 					unsigned long high;
 				} u;
 				unsigned long long quad;
-			} LARGE_INTEGER;
+			} ULARGE_INTEGER;
 
 			void Sleep(unsigned long ms);
-			void GetSystemTimeAsFileTime(LARGE_INTEGER *);
+			void GetSystemTimeAsFileTime(ULARGE_INTEGER *);
 		]]
 
 		sleep = function(ms)C.Sleep(math.floor(ms * 1000))end
-		local lit = ffi.typeof('LARGE_INTEGER[1]')
+		local lit = ffi.typeof('ULARGE_INTEGER[1]')
 		gettime = function()
 			local li = ffi.new(lit)
 			C.GetSystemTimeAsFileTime(li[0])

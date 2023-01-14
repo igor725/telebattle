@@ -18,6 +18,7 @@ end
 function _M:run(tc)
 	local searchstate, friendsmenu,
 	mainmenu, aboutmessage
+	local closed = false
 
 	searchstate = function(me)
 		me:fullClear()
@@ -35,6 +36,7 @@ function _M:run(tc)
 					require('states.game'):new(tc, otc)
 					self.wait[tc] = nil
 					self.wait[otc] = nil
+					closed = true
 					return true
 				end
 			end
@@ -42,6 +44,7 @@ function _M:run(tc)
 			coroutine.yield()
 		end
 
+		closed = true
 		return true
 	end
 
@@ -67,6 +70,7 @@ function _M:run(tc)
 			coroutine.yield()
 		end
 
+		closed = true
 		return true
 	end
 
@@ -94,6 +98,7 @@ function _M:run(tc)
 						require('states.game'):new(me, opp)
 						self.priv[nid] = nil
 						me:hideCursor()
+						closed = true
 						return true
 					end
 				end
@@ -181,7 +186,27 @@ function _M:run(tc)
 		{label = 'Exit', func = function(me) me:fullClear() me:send('Goodbye!\r\n') return false end}
 	})
 
+	tasker:newTask(function()
+		local lastx
+
+		while not closed do
+			if tc:isBroken() then
+				break
+			elseif lastx then
+				tc:clearFromCur(lastx, 1)
+			end
+
+			local fmt = ocounter:getText()
+			lastx = tc:getDimensions() - #fmt
+			tc:textOn(lastx, 1, fmt)
+			tasker.sleep(1)
+		end
+
+		tc:clearFromCur(lastx, 1)
+	end)
+
 	tc:hideCursor()
+	tc:send('\x1B[=7l') -- Disable line wrap
 	return tc:setHandler(mainmenu)
 end
 
