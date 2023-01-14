@@ -52,9 +52,8 @@ function _T:read(count)
 end
 
 function _T:close()
-	if self:isMouseEnabled() then
-		self:toggleMouse()
-	end
+	self:showCursor()
+	self:disableMouse()
 	self.closing = true
 end
 
@@ -112,12 +111,32 @@ function _T:fullClear()
 	self:send('\x1B[2J\x1B[3J\x1B[H\x1B[0m')
 end
 
+function _T:isCursorEnabled()
+	return self.info.cursor == true
+end
+
 function _T:hideCursor()
-	self:send('\x1B[?25l')
+	local info = self.info
+	if info.cursor then
+		self:send('\x1B[?25l')
+		info.cursor = false
+	end
 end
 
 function _T:showCursor()
-	self:send('\x1B[?25h')
+	local info = self.info
+	if not info.cursor then
+		self:send('\x1B[?25h')
+		info.cursor = true
+	end
+end
+
+function _T:toggleCursor()
+	if self:isCursorEnabled() then
+		self:hideCursor()
+	else
+		self:showCursor()
+	end
 end
 
 function _T:saveScreen()
@@ -244,16 +263,28 @@ function _T:getMouseState()
 	return self.info.mouse
 end
 
-function _T:toggleMouse()
-	local info = self.info
+function _T:disableMouse()
 	local modes = self.modes
-	modes.mouse = not modes.mouse
 	if modes.mouse then
-		info.mouse = {x = 0, y = 0, whl = 0, lmb = false, mmb = false, rmb = false}
-		self:send('\x1B[?1003h\x1B[?1015h\x1B[?1006h')
-	else
-		info.mouse = nil
+		modes.mouse = false
+		self.info.mouse = nil
 		self:send('\x1B[?1000l')
+	end
+end
+
+function _T:enableMouse()
+	local modes = self.modes
+	if not modes.mouse then
+		self.info.mouse = {x = 0, y = 0, whl = 0, lmb = false, mmb = false, rmb = false}
+		self:send('\x1B[?1003h\x1B[?1015h\x1B[?1006h')
+	end
+end
+
+function _T:toggleMouse()
+	if self:isMouseEnabled() then
+		self:disableMouse()
+	else
+		self:enableMouse()
 	end
 end
 
@@ -549,6 +580,7 @@ return {
 	init = function(fd, dohs)
 		return setmetatable({
 			info = {
+				cursor = true,
 				colors = false
 			},
 			modes = {
