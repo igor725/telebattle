@@ -48,7 +48,7 @@ if not succ then
 		local tst = ffi.typeof('struct timeval[1]');
 		gettime = function()
 			local ts = ffi.new(tst)
-			C.gettimeofday(ts, 0)
+			C.gettimeofday(ts, nil)
 			return tonumber(ts[0].tv_sec) + tonumber(ts[0].tv_usec) / 1.0e6
 		end
 	end
