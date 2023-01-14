@@ -73,6 +73,7 @@ function _M:run(tc)
 	local function friends_enter(me)
 		local id = ''
 		me:fullClear()
+		me:showCursor()
 		me:send('Enter room id your friend just told you:')
 		me:send(ctrlctext)
 		me:setCurPos(42, 1)
@@ -92,6 +93,7 @@ function _M:run(tc)
 					if opp then
 						require('states.game'):new(me, opp)
 						self.priv[nid] = nil
+						me:hideCursor()
 						return true
 					end
 				end
@@ -101,6 +103,7 @@ function _M:run(tc)
 					me:send('\8 \8')
 				end
 			elseif key == 'ctrlc' then
+				me:hideCursor()
 				return me:setHandler(mainmenu)
 			elseif #key == 1 then
 				local kb = key:byte()
@@ -125,17 +128,14 @@ function _M:run(tc)
 		me:send('GitHub repository: https://github.com/igor725/telebattle\r\n')
 		local motd = self.motd
 		if #motd > 0 then
-			me:send('\r\nMOTD:\r\n')
+			me:text('\r\n^+bMOTD^-b:\r\n')
 			for i = 1, #motd do
-				me:send(motd[i] .. '\r\n')
+				me:text(motd[i] .. '\r\n')
 			end
 		end
-		me:send('Press Enter to return to the main menu')
 
-		while me:waitForInput() ~= 'enter' do
-			coroutine.yield()
-		end
-
+		me:text('\r\n^+bPress any key to return to the main menu^-b')
+		me:waitForInput()
 		return me:setHandler(mainmenu)
 	end
 
@@ -173,7 +173,7 @@ function _M:run(tc)
 		{label = function(me)
 			return 'Toggle ' ..
 				(
-					me:hasColors() and '\x1B[31mc\x1B[32mo\x1B[34ml\x1B[36mo\x1B[35mr\x1B[33ms\x1B[0m [X]'
+					me:hasColors() and '\x1B[31mc\x1B[32mo\x1B[34ml\x1B[36mo\x1B[35mr\x1B[33ms\x1B[39m [X]'
 					or 'colors [ ]'
 				)
 		end, func = togglecolors},
@@ -181,6 +181,7 @@ function _M:run(tc)
 		{label = 'Exit', func = function(me) me:fullClear() me:send('Goodbye!\r\n') return false end}
 	})
 
+	tc:hideCursor()
 	return tc:setHandler(mainmenu)
 end
 

@@ -6,7 +6,7 @@ require('libs.sockman')
 
 local grevparse = io.popen('git rev-parse --short HEAD', 'r')
 if grevparse then
-	GIT_COMMIT = grevparse:read("*l")
+	GIT_COMMIT = grevparse:read('*l')
 	grevparse:close()
 end
 

@@ -7,7 +7,7 @@ local placer = require('libs.placer')
 local helptext = {
 	'Arrows - field cursor navigation',
 	'Tab - change the ship type',
-	'Enter - place the selected ship',
+	'Enter - place the selected ship / fire (ingame)',
 	'M - remove the ship under the cursor',
 	'R - rotate the ship under the cursor',
 	'P - randomize ships',

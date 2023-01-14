@@ -2,32 +2,26 @@ local _T = {}
 _T.__index = _T
 
 local cmds = {
+	IAC = '\xFF',
+	-- Telnet actions
+	DONT = '\xFE',
+	DO = '\xFD',
+	WONT = '\xFC',
+	WILL = '\xFB',
+	SB = '\xFA',
+	GOAHEAD = '\xF9',
+	BREAK = '\xF3',
+	SE = '\xF0',
+
 	-- Telnet commands
 	ECHO = '\x01',
 	SUPP_GO_AHEAD = '\x03',
-	SUPP_ECHO = '\x2D',
 	TERM = '\x18',
 	NAWS = '\x1F',
 
-	SE = '\xF0',
-	BREAK = '\xF3',
-	GOAHEAD = '\xF9',
-	SB = '\xFA',
-	WILL = '\xFB',
-	WONT = '\xFC',
-	DO = '\xFD',
-	DONT = '\xFE',
-	IAC = '\xFF',
-
 	-- TERMINAL-TYPE codes
 	IS = '\x00',
-	SEND = '\x01',
-
-	-- Escape codes
-	VT = '\x1B[',
-	HOME = 'H',
-	CLEAR = '2J',
-	RESET = '0m'
+	SEND = '\x01'
 }
 
 function _T:read(count)
@@ -111,7 +105,23 @@ function _T:sendCommand(...)
 end
 
 function _T:fullClear()
-	self:sendCommand('VT', 'CLEAR', 'VT', 'HOME')
+	self:send('\x1B[2J\x1B[3J\x1B[H\x1B[0m')
+end
+
+function _T:hideCursor()
+	self:send('\x1B[?25l')
+end
+
+function _T:showCursor()
+	self:send('\x1B[?25h')
+end
+
+function _T:saveScreen()
+	self:send('\x1B[?47h')
+end
+
+function _T:restoreScreen()
+	self:send('\x1B[?47l')
 end
 
 function _T:setCurPos(x, y)
@@ -130,7 +140,42 @@ end
 
 function _T:textOn(x, y, text)
 	self:setCurPos(x, y)
-	self:send(text)
+	self:text(text)
+end
+
+function _T:text(text)
+	self:send(text:gsub('(.?)(%^[%+%-]?.)', function(p, c)
+		if p == '%' then
+			return c
+		end
+
+		local bm = c:byte(2)
+		if bm == 0x52 then
+			return p .. '\x1B[0m'
+		end
+
+		assert(bm == 0x2B or bm == 0x2D, 'Unknown switch')
+		local m = bm == 0x2B
+		local b = c:byte(3)
+
+		if b == 0x69 then -- Italic
+			return p .. (m and '\x1B[3m' or '\x1B[23m')
+		elseif b == 0x75 then -- Underline
+			return p .. (m and '\x1B[4m' or '\x1B[24m')
+		elseif b == 0x62 then -- Bold
+			return p .. (m and '\x1B[1m' or '\x1B[22m')
+		elseif b == 0x66 then -- Faint
+			return p .. (m and '\x1B[2m' or '\x1B[22m')
+		elseif b == 0x73 then -- Strikethrough
+			return p .. (m and '\x1B[9m' or '\x1B[29m')
+		elseif b == 0x69 then -- Inverse
+			return p .. (m and '\x1B[7m' or '\x1B[29m')
+		elseif b == 0x68 then -- Hidden
+			return p .. (m and '\x1B[8m' or '\x1B[28m')
+		else
+			error('Unknown mode')
+		end
+	end))
 end
 
 function _T:waitForInput(signal)
@@ -224,7 +269,13 @@ end
 
 function _T:putColor(color)
 	if self:hasColors() then
-		self:send('\x1B[' .. tostring(color) .. 'm')
+		local ct = type(color)
+		if ct == 'string' or ct == 'number' then
+			self:send('\x1B[' .. tostring(color) .. 'm')
+			return
+		end
+
+		self:send('\x1B[1;34;39;49m')
 	end
 end
 
@@ -361,8 +412,10 @@ function _T:configure(dohs)
 						self.lastkey = 'enter'
 					end
 				end
-			elseif chb >= 0x20 and chb <= 0x7F then -- ASCII symbol
+			elseif chb >= 0x20 and chb <= 0x7E then -- ASCII symbols
 				self.lastkey = ch
+			elseif chb == 0x7F then -- Another backspace
+				self.lastkey = 'backspace'
 			elseif chb == 0xFF then -- IAC
 				local act = self:read(1)
 
@@ -509,9 +562,9 @@ return {
 		return function(me)
 			me:fullClear()
 			if type(title) == 'function' then
-				me:send(tostring(title(me)))
+				me:text(tostring(title(me)))
 			else
-				me:send(tostring(title))
+				me:text(tostring(title))
 			end
 
 			for i = 1, #buttons do
@@ -519,7 +572,7 @@ return {
 				if type(blabel) == 'function' then
 					blabel = blabel(me)
 				end
-				me:send(('\r\n%d. %s'):format(i, tostring(blabel)))
+				me:text(('\r\n%d. %s'):format(i, tostring(blabel)))
 			end
 
 			while not me:isBroken() do
