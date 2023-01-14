@@ -66,12 +66,16 @@ function _T:send(msg)
 	self.sbuffer = self.sbuffer .. tostring(msg)
 end
 
+local HAN_ERR = 'Handler must be a function'
+
 function _T:setMouseHandler(func)
+	assert(type(func) == 'function', HAN_ERR)
 	self.mhandler = func
 	return true
 end
 
 function _T:setHandler(func)
+	assert(type(func) == 'function', HAN_ERR)
 	self.handler = func
 	return true
 end
@@ -388,16 +392,17 @@ function _T:configure(dohs)
 								elseif cmd == 65 then
 									mouse.whl = -1
 								elseif cmd ~= 35 then
-									print('Unhandled mouse event:', act)
+									io.stderr:write('Unhandled mouse event:', act, '\r\n')
 								end
 
-								if self.mhandler then
-									self.mhandler(mouse)
+								local mhan = self.mhandler
+								if type(mhan) == 'function' then
+									mhan(mouse)
 								end
 							end
 						end
 					else
-						print('Unhandled escape sequence:', act)
+						io.stderr:write('Unhandled escape sequence:', act, '\r\n')
 					end
 				end
 			elseif chb < 0x20 then
@@ -447,7 +452,7 @@ function _T:configure(dohs)
 				elseif act == cmds.DO then -- Telnet does something, we don't care much about it
 					self:read(1)
 				else
-					print(('Unhandled telnet action: %X'):format(act:byte()))
+					io.stderr:write(('Unhandled telnet action: %X\r\n'):format(act:byte()))
 				end
 			end
 
