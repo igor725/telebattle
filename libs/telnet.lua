@@ -168,7 +168,7 @@ function _T:textOn(x, y, text)
 end
 
 function _T:text(text)
-	self:send(text:gsub('(.?)(%^[%+%-]?.)', function(p, c)
+	self:send(tostring(text):gsub('(.?)(%^[%+%-]?.)', function(p, c)
 		if p == '%' then
 			return c
 		end
