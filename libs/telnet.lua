@@ -14,6 +14,7 @@ local cmds = {
 	SE = '\xF0',
 
 	-- Telnet commands
+	NOP = '\x00',
 	ECHO = '\x01',
 	SUPP_GO_AHEAD = '\x03',
 	TERM = '\x18',
@@ -310,7 +311,7 @@ function _T:putColor(color)
 			return
 		end
 
-		self:send('\x1B[1;34;39;49m')
+		self:send('\x1B[39;49m')
 	end
 end
 
@@ -371,6 +372,7 @@ function _T:configure(dohs)
 		self.dead = true
 		fd:close()
 	end
+
 
 	tasker:newTask(function()
 		local subnego
@@ -533,7 +535,7 @@ function _T:configure(dohs)
 			end
 		end
 
-		while self.handler and self.handler(self) do
+		while type(self.handler) == 'function' and self.handler(self) do
 			if self.closing or self.dead then
 				break
 			end

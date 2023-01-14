@@ -173,7 +173,7 @@ function _M:run(tc)
 		{label = function(me)
 			return 'Toggle ' ..
 				(
-					me:hasColors() and '\x1B[31mc\x1B[32mo\x1B[34ml\x1B[36mo\x1B[35mr\x1B[33ms\x1B[39m [X]'
+					me:hasColors() and '\x1B[31mc\x1B[32mo\x1B[34ml\x1B[36mo\x1B[35mr\x1B[33ms\x1B[0m [X]'
 					or 'colors [ ]'
 				)
 		end, func = togglecolors},
