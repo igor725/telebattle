@@ -9,8 +9,12 @@ local colors = {
 	['#'] = '\x1B[34m#\x1B[0m'
 }
 
-function _F:draw(tc, dontmove, hits)
-	local xpos = dontmove and 1 or (self:getPos() + 1)
+function _F:setRelativeDrawing(state)
+	self.reldraw = state
+end
+
+function _F:draw(tc, hits)
+	local xpos = 1 + self:getPos()
 	tc:textOn(xpos, 1, header)
 	tc:textOn(xpos, 2, line)
 
@@ -65,7 +69,7 @@ function _F:getCharOn(x, y, hit, clr)
 	return char
 end
 
-function _F.getDimensions()
+function _F:getDimensions()
 	return #line, (10 * 2) + 2
 end
 
@@ -75,8 +79,24 @@ function _F:toWorld(x, y)
 		(y * 2) + 3
 end
 
+function _F:border(x, y)
+	local dx, dy = self:getDimensions()
+	dx, dy = dx + 1, dy + 1
+	local bx, by, rsx, rsy = 1, dy, dx, 1
+
+	if y <= dy then
+		rsx, rsy = self:getPos() + dx, 3 + (y * 2)
+	end
+
+	if x <= dx then
+		bx, by = self:getPos() + 3 + (x * 2), dy
+	end
+
+	return bx, by, rsx, rsy
+end
+
 function _F:getPos()
-	return self.index * 32
+	return self.reldraw and 0 or self.index * 32
 end
 
 function _F:reset()
@@ -106,6 +126,7 @@ end
 
 function _F:new(idx)
 	return setmetatable({
+		reldraw = false,
 		index = idx,
 		matrix = {}
 	}, self):configure()

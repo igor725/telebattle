@@ -9,45 +9,42 @@ function _H:getField()
 	return self.field
 end
 
-function _H:setRowHint(p)
-	if p < 0 or p > 9 then
+function _H:setPos(x, y)
+	x, y = x or self.col or 0, y or self.row or 0
+	if x < 0 or x > 9 or y < 0 or y > 9 then
 		return
 	end
-	local tc = self.tc
-	local off = self.field:getDimensions()
-	off = off + self.offset + 1
 
-	if self.row then
-		tc:textOn(off, 3 + (self.row * 2), ' ')
+	local tc = self.tc
+	local field = self.field
+	local ccol, crow = self.col, self.row
+
+	if ccol and crow then
+		local wx, wy = field:toWorld(ccol, crow)
+		tc:textOn(wx, wy, field:getCharOn(ccol, crow, self.hide, tc:hasColors()))
 	end
-	tc:textOn(off, 3 + (p * 2), '<')
-	self.row = p
+
+	local bx, by, rsx, rsy
+
+	if ccol and crow then
+		bx, by, rsx, rsy = field:border(ccol, crow)
+		tc:textOn(bx, by, ' ') tc:textOn(rsx, rsy, ' ')
+	end
+
+	bx, by, rsx, rsy = field:border(x, y)
+	tc:textOn(bx, by, '^') tc:textOn(rsx, rsy, '<')
+	self.col, self.row = x, y
+
+	if x and y then
+		local wx, wy = field:toWorld(x, y)
+		tc:textOn(wx, wy, '*')
+	end
 end
 
-function _H:setColHint(p)
-	if p < 0 or p > 9 then
-		return
-	end
-	local tc = self.tc
-	local ccol = self.col
-	if ccol then
-		tc:textOn(self.offset + 3 + (ccol * 2), 23, ' ')
-	end
-	tc:textOn(self.offset + 3 + (p * 2), 23, '^')
-	self.col = p
-end
-
-function _H:place(char)
-	local col = self.col
-	local row = self.row
-	local tc = self.tc
-
-	if col and row then
-		tc:textOn(
-			self.offset + 3 + (col * 2), 3 + (row * 2),
-			char or self.field:getCharOn(col, row, self.hide, tc:hasColors())
-		)
-	end
+function _H:movedir(dc, dr)
+	local col = self.col or 0
+	local row = self.row or 0
+	self:setPos(col + dc, row + dr)
 end
 
 function _H:handleKey(key)
@@ -60,19 +57,12 @@ function _H:handleKey(key)
 	elseif key == 'adown' then
 		self:movedir(0, 1)
 	else
+		self:setPos(nil, nil)
 		return false
 	end
 
+	self:setPos(nil, nil)
 	return true
-end
-
-function _H:movedir(dc, dr)
-	self.col = self.col or 0
-	self.row = self.row or 0
-	self:place(nil)
-	self:setColHint(self.col + dc)
-	self:setRowHint(self.row + dr)
-	self:place('*')
 end
 
 function _H:update(ch)
@@ -86,29 +76,26 @@ function _H:update(ch)
 
 	local chb = ch:byte()
 
-	self:place(nil)
 	if chb > 47 and chb < 58 then
-		self:setRowHint(chb - 48)
+		self:setPos(nil, chb - 48)
 	elseif chb > 64 and chb < 75 then
-		self:setColHint(chb - 65)
+		self:setPos(chb - 65, nil)
 	elseif chb > 96 and chb < 107 then
-		self:setColHint(chb - 97)
+		self:setPos(chb - 97, nil)
 	else
-		self:place('*')
+		self:setPos(nil, nil)
 		return false
 	end
 
-	self:place('*')
 	return true
 end
 
-function _H:new(tc, field, hide, dontmove)
+function _H:new(tc, field, hide)
 	return setmetatable({
 		tc = tc,
 		field = field,
 		row = 0, col = 0,
-		hide = hide == true,
-		offset = dontmove and 0 or field:getPos(),
+		hide = hide == true
 	}, self)
 end
 

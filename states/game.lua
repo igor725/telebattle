@@ -91,8 +91,8 @@ function _Ga:configure()
 	local function makemessage(text)
 		return function(me)
 			me:fullClear()
-			me:send(text .. '\r\nPress any key to return to the main menu')
-			me:waitForInput()
+			me:send(text .. '\r\nPress Enter to return to the main menu')
+			while me:waitForInput() ~= 'enter' do end
 			menu:run(me)
 			self:close()
 			return true
@@ -189,7 +189,8 @@ function _Ga:configure()
 			local hide = owner ~= me
 			local xpos = field:getPos()
 			local text
-			field:draw(me, false, hide)
+			field:setRelativeDrawing(false)
+			field:draw(me, hide)
 			owner:textOn(alivex, 1, 'Ships | Yours | Opponent\'s')
 			for i = 0, 3 do
 				owner:textOn(alivex, 2 + i, ('%+5s |   %d   |     %d'):format(
@@ -200,7 +201,7 @@ function _Ga:configure()
 			if hide then
 				opp = owner
 				text = 'Opponent\'s field'
-				_hint = hint:new(me, field, true, false)
+				_hint = hint:new(me, field, true)
 			else
 				text = 'Your field'
 			end
@@ -295,11 +296,12 @@ function _Ga:configure()
 
 	placingstate = function(me)
 		local _field = self:fieldOf(me)
+		_field:setRelativeDrawing(true)
 		local _placer = self:placerOf(_field)
-		local _hint = hint:new(me, _field, false, true)
+		local _hint = hint:new(me, _field, false)
 		local w = _field:getDimensions()
 		me:fullClear()
-		_field:draw(me, true)
+		_field:draw(me, false)
 		local shoff = w + 4
 		local marker = shoff + 12
 		local selected = 0
@@ -356,16 +358,16 @@ function _Ga:configure()
 			if not _hint:update(key) then
 				if key == 'r' then
 					if _placer:rotate(x, y) then
-						_field:draw(me, true)
+						_field:draw(me, false)
 					end
 				elseif key == 'z' then
 					if _placer:removeAll() then
-						_field:draw(me, true)
+						_field:draw(me, false)
 						updateShipInfo()
 					end
 				elseif key == 'p' then
 					_placer:randomPlace()
-					_field:draw(me, true)
+					_field:draw(me, false)
 					updateShipInfo()
 				elseif key == 'm' then
 					local sh, id = _placer:getShipOn(x, y)
@@ -374,7 +376,7 @@ function _Ga:configure()
 							local sht = sh:getType()
 							updateShipInfo(sht)
 							updateShipSelection(sht)
-							_field:draw(me, true)
+							_field:draw(me, false)
 							_hint:update('\0')
 						end
 					end
@@ -391,7 +393,7 @@ function _Ga:configure()
 					else
 						if _placer:place(x, y, selected) then
 							updateShipInfo(selected)
-							_field:draw(me, true)
+							_field:draw(me, false)
 							if _placer:getAvail(selected) < 1 then
 								selectNext()
 							end
