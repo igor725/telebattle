@@ -431,7 +431,6 @@ do
         end
     end
 
-
     ffi.cdef[[
         char *strerror(int errnum);
         int getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res);
@@ -998,7 +997,6 @@ function M.find_first_address(host, service, options)
 
     return addrinfo[1]
 end
-
 
 do
     local meta = {}

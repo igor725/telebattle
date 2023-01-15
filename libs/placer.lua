@@ -18,7 +18,6 @@ local ship_mt = {
 		return self.len - 1
 	end,
 
-
 	isType = function(self, t)
 		return self.len - t == 1
 	end,

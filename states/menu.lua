@@ -52,11 +52,11 @@ function _M:run(tc)
 
 	local function friends_host(me)
 		me:fullClear()
-		local id = self.start
+		local id = 0
 		repeat
 			id = id + 1
 		until self.priv[id] == nil
-		me:send(('Your room id is %d'):format(id))
+		me:send(('Your room id is %d'):format(self.start + id))
 		me:send('\r\nTell this number to your friend you want play with')
 		me:send(ctrlctext)
 		self.priv[id] = me
@@ -93,6 +93,7 @@ function _M:run(tc)
 				id = ''
 
 				if nid then
+					nid = nid - self.start
 					local opp = self.priv[nid]
 					if opp then
 						require('states.game'):new(me, opp)
@@ -192,13 +193,16 @@ function _M:run(tc)
 		while not closed do
 			if tc:isBroken() then
 				break
-			elseif lastx then
+			end
+			tc:send('\x1B[s')
+			if lastx then
 				tc:clearFromCur(lastx, 1)
 			end
 
 			local fmt = ocounter:getText()
 			lastx = tc:getDimensions() - #fmt
 			tc:textOn(lastx, 1, fmt)
+			tc:send('\x1B[u')
 			tasker.sleep(1)
 		end
 

@@ -350,8 +350,8 @@ local negotiators = {
 				tc.info.term = name
 				tc.modes.colors = name:find('color', 1, true) ~= nil or
 								  name:find('xterm', 1, true) ~= nil or
-								  name:find('vt100') ~= nil or
-								  name:find('linux') ~= nil
+								  name:find('vt100', 1, true) ~= nil or
+								  name:find('linux', 1, true) ~= nil
 				return true
 			end
 		end
@@ -364,10 +364,13 @@ function _T:configure(dohs)
 	local fd = self.fd
 
 	local function fuckit(coro, err)
-		local sha = GIT_COMMIT or '[unknown]'
-
-		fd:send('\x1B[2J\x1B[H\r\nTelnet panic screen (commit: ')
-		fd:send(sha) fd:send(')\r\n')
+		fd:send('\x1B[2J\x1B[H\r\nTelnet panic screen')
+		if type(GIT_COMMIT) == 'string' then
+			fd:send(' (commit: ')
+			fd:send(GIT_COMMIT)
+			fd:send(')')
+		end
+		fd:send('\r\n')
 		fd:send(tasker.defErrHand(coro, err))
 		self.dead = true
 		fd:close()
