@@ -373,6 +373,93 @@ function _T:configure(dohs)
 		fd:close()
 	end
 
+	tasker:newTask(function()
+		while not self.dead do
+			local sbuf = self.sbuffer
+			local bufsz = #sbuf
+
+			if bufsz > 0 then
+				local spos, err = fd:send(sbuf)
+				if err == 'closed' then
+					break
+				elseif err ~= nil then
+					coroutine.yield()
+				end
+
+				self.sbuffer = self.sbuffer:sub(spos + 1)
+			elseif self.closing then
+				break
+			else
+				coroutine.yield()
+			end
+		end
+
+		fd:close()
+		self.fd = nil
+		self.dead = true
+	end, fuckit)
+
+	tasker:newTask(function()
+		if dohs then
+			self:sendCommand(
+				'IAC', 'DO', 'NAWS',
+				'IAC', 'DO', 'TERM'
+			)
+
+			local timeout = gettime() + 2
+			local modes = self.modes
+			while modes.term == nil or modes.naws == nil do
+				coroutine.yield()
+
+				if gettime() > timeout then
+					self:close()
+				end
+
+				if self:isBroken() then
+					self:close()
+					return
+				end
+			end
+
+			local info = self.info
+			if modes.term then
+				while info.term == nil do
+					coroutine.yield()
+
+					if gettime() > timeout then
+						self:close()
+					end
+
+					if self:isBroken() then
+						self:close()
+						return
+					end
+				end
+			end
+			if modes.naws then
+				while info.width == nil do
+					coroutine.yield()
+
+					if gettime() > timeout then
+						self:close()
+					end
+
+					if self:isBroken() then
+						self:close()
+						return
+					end
+				end
+			end
+		end
+
+		while type(self.handler) == 'function' and self.handler(self) do
+			if self.closing or self.dead then
+				break
+			end
+		end
+
+		self:close()
+	end, fuckit)
 
 	tasker:newTask(function()
 		local subnego
@@ -450,7 +537,9 @@ function _T:configure(dohs)
 						self.lastkey = 'enter'
 					end
 				end
-			elseif chb >= 0x20 and chb <= 0x7E then -- ASCII symbols
+			elseif chb == 0x20 then
+				self.lastkey = 'space'
+			elseif chb >= 0x21 and chb <= 0x7E then -- ASCII symbols
 				self.lastkey = ch
 			elseif chb == 0x7F then -- Another backspace
 				self.lastkey = 'backspace'
@@ -493,81 +582,6 @@ function _T:configure(dohs)
 				coroutine.yield()
 			end
 		end
-	end, fuckit)
-
-	tasker:newTask(function()
-		if dohs then
-			self:sendCommand(
-				'IAC', 'DO', 'NAWS',
-				'IAC', 'DO', 'TERM'
-			)
-
-			local modes = self.modes
-			while modes.term == nil or modes.naws == nil do
-				coroutine.yield()
-
-				if self:isBroken() then
-					self:close()
-					return
-				end
-			end
-
-			local info = self.info
-			if modes.term then
-				while info.term == nil do
-					coroutine.yield()
-
-					if self:isBroken() then
-						self:close()
-						return
-					end
-				end
-			end
-			if modes.naws then
-				while info.width == nil do
-					coroutine.yield()
-
-					if self:isBroken() then
-						self:close()
-						return
-					end
-				end
-			end
-		end
-
-		while type(self.handler) == 'function' and self.handler(self) do
-			if self.closing or self.dead then
-				break
-			end
-		end
-
-		self:close()
-	end, fuckit)
-
-	tasker:newTask(function()
-		while not self.dead do
-			local sbuf = self.sbuffer
-			local bufsz = #sbuf
-
-			if bufsz > 0 then
-				local spos, err = fd:send(sbuf)
-				if err == 'closed' then
-					break
-				elseif err ~= nil then
-					coroutine.yield()
-				end
-
-				self.sbuffer = self.sbuffer:sub(spos + 1)
-			elseif self.closing then
-				break
-			end
-
-			coroutine.yield()
-		end
-
-		fd:close()
-		self.fd = nil
-		self.dead = true
 	end, fuckit)
 
 	self.configure = false
