@@ -53,9 +53,9 @@ function _T.defErrHand(coro, err)
 	return fmts
 end
 
-function _T.sleep(sec)
+function _T.sleep(sec, signal)
 	local time = gettime() + sec
-	while gettime() < time do
+	while gettime() < time and (not signal or not signal:signaled()) do
 		coroutine.yield()
 	end
 	return true

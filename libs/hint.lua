@@ -42,9 +42,10 @@ function _H:setPos(x, y)
 end
 
 function _H:movedir(dc, dr)
-	local col = self.col or 0
-	local row = self.row or 0
-	self:setPos(col + dc, row + dr)
+	self:setPos(
+		(self.col or 0) + dc,
+		(self.row or 0) + dr
+	)
 end
 
 function _H:handleKey(key)

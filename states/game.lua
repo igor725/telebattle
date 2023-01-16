@@ -1,5 +1,6 @@
 local _Ga = {}
 _Ga.__index = _Ga
+
 local field = require('libs.field')
 local hint = require('libs.hint')
 local placer = require('libs.placer')

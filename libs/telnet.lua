@@ -196,6 +196,8 @@ function _T:text(text)
 			return p .. (m and '\x1B[7m' or '\x1B[29m')
 		elseif b == 0x68 then -- Hidden
 			return p .. (m and '\x1B[8m' or '\x1B[28m')
+		elseif b == 0x6C then -- bLink
+			return p .. (m and '\x1B[5m' or '\x1B[25m')
 		else
 			error('Unknown mode')
 		end
