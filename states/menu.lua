@@ -26,6 +26,11 @@ function _M:run(tc)
 		self.wait[me] = true
 
 		while self.wait[me] do
+			if me:isBroken() then
+				self.wait[me] = nil
+				return false
+			end
+
 			if me:lastInput() == 'ctrlc' then
 				self.wait[me] = nil
 				return me:setHandler(mainmenu)
@@ -62,6 +67,11 @@ function _M:run(tc)
 		self.priv[id] = me
 
 		while self.priv[id] == me do
+			if me:isBroken() then
+				self.priv[id] = nil
+				return false
+			end
+
 			if me:lastInput() == 'ctrlc' then
 				self.priv[id] = nil
 				return me:setHandler(mainmenu)
