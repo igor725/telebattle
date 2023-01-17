@@ -81,8 +81,8 @@ end
 
 function _F:border(x, y)
 	local dx, dy = self:getDimensions()
-	dx, dy = dx + 1, dy + 1
 	local bx, by, rsx, rsy = 1, dy, dx, 1
+	dx, dy = dx + 1, dy + 1
 
 	if y <= dy then
 		rsx, rsy = self:getPos() + dx, 3 + (y * 2)

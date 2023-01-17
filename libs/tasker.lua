@@ -95,10 +95,6 @@ function _T:update()
 	end
 end
 
-function _T:getCount()
-	return #self.list
-end
-
 function _T:runLoop()
 	while true do
 		local start = gettime()

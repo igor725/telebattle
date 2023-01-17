@@ -350,8 +350,8 @@ local negotiators = {
 				assert(tc:read(1) == cmds.SE)
 				name = name:lower()
 				tc.info.term = name
-				tc.modes.colors = name:find('color', 1, true) ~= nil or
-								  name:find('xterm', 1, true) ~= nil or
+				tc.modes.colors = name:find('xterm', 1, true) ~= nil or
+								  name:find('color', 1, true) ~= nil or
 								  name:find('vt100', 1, true) ~= nil or
 								  name:find('linux', 1, true) ~= nil
 				return true
