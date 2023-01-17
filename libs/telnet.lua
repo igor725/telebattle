@@ -376,7 +376,7 @@ local negotiators = {
 
 			if char ~= cmds.IAC then
 				name = name .. char
-				assert(#name < 32, 'Terminal name is too long')
+				assert(#name < 40, 'Terminal name is too long')
 			else
 				assert(tc:read(1) == cmds.SE)
 				name = name:lower()
@@ -518,7 +518,7 @@ function _T:configure(dohs)
 				if es == '[' then
 					local act = self:read(1)
 					if not endsym:find(act, 1, true) then
-						while true do
+						while #act < 32 do
 							local nch = self:read(1)
 							act = act .. nch
 							if endsym:find(nch, 1, true) then break end
@@ -571,10 +571,8 @@ function _T:configure(dohs)
 				if act == cmds.SB then -- Telnet wants to start negotiation
 					local opt = self:read(1)
 					subnego = negotiators[opt]
-					if subnego then
-						self:sendCommand('IAC', 'GOAHEAD')
-					else
-						self:sendCommand('IAC', 'WONT', opt:byte())
+					if subnego == nil then
+						self:sendCommand('IAC', 'DONT', opt:byte())
 					end
 				elseif act == cmds.SE then -- Telnet wants to end negotiation
 					subnego = nil
@@ -598,16 +596,12 @@ function _T:configure(dohs)
 				else
 					self:debug(('Unhandled telnet action: %X'):format(act:byte()))
 				end
-			else
-				if chb ~= 0x00 then
-					local key = keys[chb]
-					if key then
-						self.lastkey = key
-					else
-						self:debug(('Unhandled telnet key: %X'):format(chb))
-					end
+			elseif chb ~= 0x0A and chb ~= 0x00 then
+				local key = keys[chb]
+				if key then
+					self.lastkey = key
 				else
-					print(self:read(1):byte())
+					self:debug(('Unhandled telnet key: %X'):format(chb))
 				end
 			end
 

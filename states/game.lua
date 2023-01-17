@@ -25,6 +25,7 @@ function _Ga:close()
 	self.fields = nil
 	self.placers = nil
 	self.closed = true
+	self.turn = nil
 	self.state = -1
 end
 
