@@ -31,7 +31,7 @@ function _M:run(tc)
 				return false
 			end
 
-			if me:lastInput() == 'ctrlc' then
+			if me:lastInput() == 'ctrl+c' then
 				self.wait[me] = nil
 				return me:setHandler(mainmenu)
 			end
@@ -72,7 +72,7 @@ function _M:run(tc)
 				return false
 			end
 
-			if me:lastInput() == 'ctrlc' then
+			if me:lastInput() == 'ctrl+c' then
 				self.priv[id] = nil
 				return me:setHandler(mainmenu)
 			end
@@ -118,7 +118,7 @@ function _M:run(tc)
 					id = id:sub(1, -2)
 					me:send('\8 \8')
 				end
-			elseif key == 'ctrlc' then
+			elseif key == 'ctrl+c' then
 				me:hideCursor()
 				return me:setHandler(mainmenu)
 			elseif #key == 1 then

@@ -279,7 +279,7 @@ function _Ga:configure()
 								break
 							end
 						end
-					elseif key == 'ctrlc' then
+					elseif key == 'ctrl+c' then
 						self:finish(opp)
 					end
 				end
@@ -383,7 +383,7 @@ function _Ga:configure()
 					end
 				elseif key == 'tab' then
 					selectNext()
-				elseif key == 'ctrlc' then
+				elseif key == 'ctrl+c' then
 					self:finish()
 					menu:run(me)
 					return true

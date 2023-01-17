@@ -1,4 +1,6 @@
-local _T = {}
+local _T = {
+	_DEBUG = true
+}
 _T.__index = _T
 
 local cmds = {
@@ -24,6 +26,12 @@ local cmds = {
 	IS = '\x00',
 	SEND = '\x01'
 }
+
+function _T:debug(fmt, ...)
+	if self._DEBUG then
+		io.stderr:write(fmt:format(...), '\r\n')
+	end
+end
 
 function _T:read(count)
 	count = tonumber(count)
@@ -318,6 +326,17 @@ function _T:putColor(color)
 end
 
 local keys = {
+	[0x08] = 'backspace',
+	[0x09] = 'tab',
+	[0x0D] = 'enter',
+	[0x20] = 'space',
+	[0x7F] = 'backspace',
+	[0x1C] = 'ctrl+4',
+	[0x1D] = 'ctrl+]',
+	[0x1E] = 'ctrl+6',
+	[0x1F] = 'ctrl+minus',
+
+	-- Escape sequences
 	['A'] = 'aup',
 	['B'] = 'adown',
 	['C'] = 'aright',
@@ -329,6 +348,18 @@ local keys = {
 	['5~'] = 'pgup',
 	['6~'] = 'pgdn',
 }
+
+for i = 0x01, 0x1A do
+	if not keys[i] then
+		keys[i] = 'ctrl+' .. string.char(0x60 + i)
+	end
+end
+
+for i = 0x01, 0x0E do
+	-- TODO: Too hacky?
+	local off = (i > 0x0C) and 2 or ((i < 0x06) and 0 or 1)
+	keys[tostring(10 + i) .. '~'] = 'F' .. tostring(i - off)
+end
 
 local negotiators = {
 	[cmds.NAWS] = function(tc)
@@ -517,7 +548,7 @@ function _T:configure(dohs)
 								elseif cmd == 65 then
 									mouse.whl = -1
 								elseif cmd ~= 35 then
-									io.stderr:write('Unhandled mouse event:', act, '\r\n')
+									self:debug('Unhandled mouse event:', act:byte(1, -1))
 								end
 
 								local mhan = self.mhandler
@@ -527,27 +558,13 @@ function _T:configure(dohs)
 							end
 						end
 					else
-						io.stderr:write('Unhandled escape sequence:', act, '\r\n')
+						self:debug('Unhandled escape sequence:', act:byte(1, -1))
 					end
+				else
+					self:debug(('Failed to handle escape sequence: %X'):format(es:byte()))
 				end
-			elseif chb < 0x20 then
-				if ch ~= '\n' then
-					if ch == '\3' then
-						self.lastkey = 'ctrlc'
-					elseif ch == '\8' then
-						self.lastkey = 'backspace'
-					elseif ch == '\t' then
-						self.lastkey = 'tab'
-					elseif ch == '\r' then
-						self.lastkey = 'enter'
-					end
-				end
-			elseif chb == 0x20 then
-				self.lastkey = 'space'
 			elseif chb >= 0x21 and chb <= 0x7E then -- ASCII symbols
 				self.lastkey = ch
-			elseif chb == 0x7F then -- Another backspace
-				self.lastkey = 'backspace'
 			elseif chb == 0xFF then -- IAC
 				local act = self:read(1)
 
@@ -579,7 +596,18 @@ function _T:configure(dohs)
 				elseif act == cmds.DO then -- Telnet does something, we don't care much about it
 					self:read(1)
 				else
-					io.stderr:write(('Unhandled telnet action: %X\r\n'):format(act:byte()))
+					self:debug(('Unhandled telnet action: %X'):format(act:byte()))
+				end
+			else
+				if chb ~= 0x00 then
+					local key = keys[chb]
+					if key then
+						self.lastkey = key
+					else
+						self:debug(('Unhandled telnet key: %X'):format(chb))
+					end
+				else
+					print(self:read(1):byte())
 				end
 			end
 
