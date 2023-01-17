@@ -1,9 +1,9 @@
 #!/usr/bin/env luajit
+require('libs.sockman')
 tasker = require('libs.tasker')
 telnet = require('libs.telnet')
 ocounter = require('libs.ocounter')
 menu = require('states.menu')
-require('libs.sockman')
 
 local grevparse = io.popen('git rev-parse --short HEAD', 'r')
 if grevparse then

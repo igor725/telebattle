@@ -1,3 +1,13 @@
+local co_create = coroutine.create
+local co_resume = coroutine.resume
+local co_yield = coroutine.yield
+local dbg_trace = debug.traceback
+local tab_insert = table.insert
+local tab_remove = table.remove
+local io_stderr = io.stderr
+local gettime = _G.gettime
+local sleep = _G.sleep
+
 local _T = {
 	list = {},
 	onerror = {},
@@ -10,7 +20,7 @@ local _T = {
 		end,
 		wait = function(self)
 			while not self.signaled do
-				coroutine.yield()
+				co_yield()
 			end
 
 			return true
@@ -28,7 +38,7 @@ local _T = {
 		end,
 		wait = function(self, reset)
 			while gettime() < self.timeout do
-				coroutine.yield()
+				co_yield()
 			end
 
 			if reset then
@@ -47,25 +57,25 @@ _T.timeout.__index = _T.timeout
 
 function _T.defErrHand(coro, err)
 	local fmts = ('coroutine[%p] died: %s\r\n%s\r\n'):format(
-		coro, err, debug.traceback(coro):gsub('\n', '\r\n')
+		coro, err, dbg_trace(coro):gsub('\n', '\r\n')
 	)
-	io.stderr:write(fmts)
+	io_stderr:write(fmts)
 	return fmts
 end
 
 function _T.sleep(sec, signal)
 	local time = gettime() + sec
 	while gettime() < time and (not signal or not signal:signaled()) do
-		coroutine.yield()
+		co_yield()
 	end
 	return true
 end
 
 function _T:newTask(func, errh)
-	local coro = coroutine.create(function()
+	local coro = co_create(function()
 		func() return true
 	end)
-	table.insert(self.list, coro)
+	tab_insert(self.list, coro)
 	self.onerror[coro] = errh
 end
 
@@ -79,26 +89,23 @@ function _T:newTimeout(init)
 	return setmetatable({}, self.timeout):reset(init)
 end
 
-function _T:update()
-	local coros = self.list
-	for i = #coros, 1, -1 do
-		local coro = coros[i]
-		local ret, st = coroutine.resume(coro)
-		if ret == false or st == true then
-			table.remove(coros, i)
-			if ret == false then
-				local errh = self.onerror[coro] or tasker.defErrHand
-				if errh then pcall(errh, coro, st)end
-				self.onerror[coro] = nil
-			end
-		end
-	end
-end
-
 function _T:runLoop()
+	local coros = self.list
+
 	while true do
 		local start = gettime()
-		self:update()
+		for i = #coros, 1, -1 do
+			local coro = coros[i]
+			local ret, st = co_resume(coro)
+			if ret == false or st == true then
+				tab_remove(coros, i)
+				if ret == false then
+					local errh = self.onerror[coro] or self.defErrHand
+					if errh then pcall(errh, coro, st)end
+					self.onerror[coro] = nil
+				end
+			end
+		end
 		local elap = gettime() - start
 		if elap < 0.031 then
 			sleep(0.031 - elap)

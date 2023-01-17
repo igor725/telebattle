@@ -27,23 +27,28 @@ local cmds = {
 	SEND = '\x01'
 }
 
+local gettime = _G.gettime
+local co_yield = coroutine.yield
+local io_stderr = io.stderr
+
 function _T:debug(fmt, ...)
 	if self._DEBUG then
-		io.stderr:write(fmt:format(...), '\r\n')
+		io_stderr:write(fmt:format(...), '\r\n')
 	end
 end
 
 function _T:read(count)
 	count = tonumber(count)
+	local fd = self.fd
 	local data, err
 	local buf = ''
 
 	while not self.dead do
-		data, err = self.fd:receive(count)
+		data, err = fd:receive(count)
 		if err == 'closed' then
 			break
 		elseif err == 'timeout' then
-			coroutine.yield()
+			co_yield()
 		elseif data then
 			count = count - #data
 			if count == 0 then
@@ -214,7 +219,7 @@ end
 
 function _T:waitForInput(signal)
 	repeat
-		coroutine.yield()
+		co_yield()
 
 		if self:isBroken() then
 			return nil, 'closed'
@@ -257,7 +262,7 @@ function _T:waitForDimsChange(signal)
 			return nw, nh
 		end
 
-		coroutine.yield()
+		co_yield()
 		if signal and signal:isSignaled() then
 			return w, h, 'signaled'
 		end
@@ -419,14 +424,14 @@ function _T:configure(dohs)
 				if err == 'closed' then
 					break
 				elseif err ~= nil then
-					coroutine.yield()
+					co_yield()
 				end
 
 				self.sbuffer = self.sbuffer:sub(spos + 1)
 			elseif self.closing then
 				break
 			else
-				coroutine.yield()
+				co_yield()
 			end
 		end
 
@@ -445,7 +450,7 @@ function _T:configure(dohs)
 			local timeout = gettime() + 2
 			local modes = self.modes
 			while modes.term == nil or modes.naws == nil do
-				coroutine.yield()
+				co_yield()
 
 				if gettime() > timeout then
 					self:close()
@@ -460,7 +465,7 @@ function _T:configure(dohs)
 			local info = self.info
 			if modes.term then
 				while info.term == nil do
-					coroutine.yield()
+					co_yield()
 
 					if gettime() > timeout then
 						self:close()
@@ -474,7 +479,7 @@ function _T:configure(dohs)
 			end
 			if modes.naws then
 				while info.width == nil do
-					coroutine.yield()
+					co_yield()
 
 					if gettime() > timeout then
 						self:close()
@@ -606,7 +611,7 @@ function _T:configure(dohs)
 			end
 
 			if self.lastkey then
-				coroutine.yield()
+				co_yield()
 			end
 		end
 	end, fuckit)
