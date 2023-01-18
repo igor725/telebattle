@@ -65,9 +65,11 @@ end
 
 function _T.sleep(sec, signal)
 	local time = gettime() + sec
+
 	while gettime() < time and (not signal or not signal:signaled()) do
 		co_yield()
 	end
+
 	return true
 end
 

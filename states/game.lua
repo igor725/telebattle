@@ -95,9 +95,8 @@ function _Ga:configure()
 			me:fullClear()
 			me:send(text .. '\r\nPress Enter to return to the main menu')
 			while me:waitForInput() ~= 'enter' do end
-			menu:run(me)
 			self:close()
-			return true
+			return menu:run(me)
 		end
 	end
 
@@ -181,9 +180,8 @@ function _Ga:configure()
 		me:fullClear()
 		me:send('Waiting for opponent to finish placing ships...')
 		if not self:waitStart(me) then
-			me:setHandler(makemessage('Game canceled'))
 			self:close()
-			return true
+			return me:setHandler(makemessage('Game canceled'))
 		end
 
 		me:fullClear() me:send('\a')
@@ -355,9 +353,9 @@ function _Ga:configure()
 				end
 			end
 
-			local x, y = _hint:getPos()
-
 			if not _hint:update(key) then
+				local x, y = _hint:getPos()
+
 				if key == 'r' then
 					if _placer:rotate(x, y) then
 						_field:draw(me, false)
@@ -386,8 +384,7 @@ function _Ga:configure()
 					selectNext()
 				elseif key == 'ctrl+c' then
 					self:finish()
-					menu:run(me)
-					return true
+					return menu:run(me)
 				elseif key == 'enter' then
 					if _placer:isReady() then
 						self:playerReady()
@@ -407,10 +404,9 @@ function _Ga:configure()
 			coroutine.yield()
 		end
 
-		me:setHandler(makemessage('Opponent left the game'))
 		signal:signal()
 		self:close()
-		return true
+		return me:setHandler(makemessage('Opponent left the game'))
 	end
 
 	for pl, fl in pairs(self.fields) do

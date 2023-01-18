@@ -469,6 +469,7 @@ function _T:configure(dohs)
 
 					if gettime() > timeout then
 						self:close()
+						return
 					end
 
 					if self:isBroken() then
@@ -483,6 +484,7 @@ function _T:configure(dohs)
 
 					if gettime() > timeout then
 						self:close()
+						return
 					end
 
 					if self:isBroken() then

@@ -11,9 +11,6 @@ if grevparse then
 	grevparse:close()
 end
 
-local server, ip, port = initServer('*', tonumber(arg[1]) or 2425)
-print(('Telnet listener started on: %s:%d'):format(ip, port))
-
 local function init(me)
 	me:sendCommand(
 		'IAC', 'WILL', 'ECHO',
@@ -47,6 +44,8 @@ tasker:newTask(function()
 	menu:init()
 	math.randomseed(os.time())
 	local run = true
+	local server, ip, port = initServer('*', tonumber(arg[1]) or 2425)
+	print(('Telnet listener started on: %s:%d'):format(ip, port))
 
 	while run do
 		local cl
